@@ -1,6 +1,12 @@
-import { Link, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
+import {
+  Link,
+  useNavigate,
+  useLocation,
+  Outlet,
+  Navigate,
+} from "react-router-dom";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   UtensilsCrossed,
   LayoutDashboard,
@@ -14,19 +20,19 @@ import {
   X,
   Loader2,
   CalendarOff,
-} from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const adminNavItems = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/menu', icon: ChefHat, label: 'Kelola Menu' },
-  { to: '/admin/orders', icon: ShoppingBag, label: 'Kelola Order' },
-  { to: '/admin/users', icon: Users, label: 'Daftar User' },
-  { to: '/admin/reports', icon: BarChart3, label: 'Laporan' },
-  { to: '/admin/invoices', icon: FileText, label: 'Keuangan' },
-  { to: '/admin/holidays', icon: CalendarOff, label: 'Hari Libur' },
+  { to: "/admin", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/admin/menu", icon: ChefHat, label: "Kelola Menu" },
+  { to: "/admin/orders", icon: ShoppingBag, label: "Kelola Order" },
+  { to: "/admin/users", icon: Users, label: "Daftar User" },
+  { to: "/admin/reports", icon: BarChart3, label: "Laporan" },
+  { to: "/admin/invoices", icon: FileText, label: "Keuangan" },
+  { to: "/admin/holidays", icon: CalendarOff, label: "Hari Libur" },
 ];
 
 export default function AdminLayout() {
@@ -39,9 +45,9 @@ export default function AdminLayout() {
   useEffect(() => {
     const checkAdminRole = async () => {
       if (user) {
-        const { data } = await supabase.rpc('has_role', {
+        const { data } = await supabase.rpc("has_role", {
           _user_id: user.id,
-          _role: 'admin'
+          _role: "admin",
         });
         setIsAdmin(!!data);
       }
@@ -51,7 +57,7 @@ export default function AdminLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/login');
+    navigate("/login");
   };
 
   if (isLoading || isAdmin === null) {
@@ -76,7 +82,11 @@ export default function AdminLayout() {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(true)}
+          >
             <Menu className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-2">
@@ -101,7 +111,7 @@ export default function AdminLayout() {
         className={cn(
           "fixed top-0 left-0 h-full w-72 bg-card border-r border-border z-50 transition-transform duration-300",
           "lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -113,10 +123,15 @@ export default function AdminLayout() {
               </div>
               <div>
                 <span className="font-bold text-lg">Admin Panel</span>
-                <p className="text-xs text-muted-foreground">MakanSekolah</p>
+                <p className="text-xs text-muted-foreground">Dapoer-Attauhid</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            >
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -126,12 +141,16 @@ export default function AdminLayout() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center">
                 <span className="text-secondary font-bold">
-                  {(profile?.full_name || 'A').charAt(0).toUpperCase()}
+                  {(profile?.full_name || "A").charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{profile?.full_name || 'Admin'}</p>
-                <p className="text-sm text-muted-foreground truncate">Administrator</p>
+                <p className="font-semibold text-foreground truncate">
+                  {profile?.full_name || "Admin"}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  Administrator
+                </p>
               </div>
             </div>
           </div>
@@ -150,7 +169,7 @@ export default function AdminLayout() {
                     "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
                     isActive
                       ? "bg-secondary text-secondary-foreground shadow-md"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Icon className="w-5 h-5" />
@@ -159,7 +178,6 @@ export default function AdminLayout() {
               );
             })}
           </nav>
-
 
           {/* Logout */}
           <div className="p-4 border-t border-border">

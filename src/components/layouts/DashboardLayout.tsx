@@ -1,8 +1,14 @@
-import { Link, useNavigate, useLocation, Outlet, Navigate } from 'react-router-dom';
-import { useApp } from '@/context/AppContext';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import {
+  Link,
+  useNavigate,
+  useLocation,
+  Outlet,
+  Navigate,
+} from "react-router-dom";
+import { useApp } from "@/context/AppContext";
+import { useAuth } from "@/context/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   UtensilsCrossed,
   Home,
@@ -16,19 +22,19 @@ import {
   X,
   ChefHat,
   Loader2,
-} from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
-  { to: '/dashboard', icon: Home, label: 'Dashboard' },
-  { to: '/dashboard/menu', icon: ChefHat, label: 'Pesan Makanan' },
-  { to: '/dashboard/cart', icon: ShoppingCart, label: 'Keranjang' },
-  { to: '/dashboard/recipients', icon: Users, label: 'Penerima' },
-  { to: '/dashboard/orders', icon: History, label: 'Riwayat Order' },
-  { to: '/dashboard/invoices', icon: FileText, label: 'Invoice' },
-  { to: '/dashboard/settings', icon: Settings, label: 'Pengaturan' },
+  { to: "/dashboard", icon: Home, label: "Dashboard" },
+  { to: "/dashboard/menu", icon: ChefHat, label: "Pesan Makanan" },
+  { to: "/dashboard/cart", icon: ShoppingCart, label: "Keranjang" },
+  { to: "/dashboard/recipients", icon: Users, label: "Penerima" },
+  { to: "/dashboard/orders", icon: History, label: "Riwayat Order" },
+  { to: "/dashboard/invoices", icon: FileText, label: "Invoice" },
+  { to: "/dashboard/settings", icon: Settings, label: "Pengaturan" },
 ];
 
 export default function DashboardLayout() {
@@ -44,9 +50,9 @@ export default function DashboardLayout() {
   useEffect(() => {
     const checkAdminRole = async () => {
       if (user) {
-        const { data } = await supabase.rpc('has_role', {
+        const { data } = await supabase.rpc("has_role", {
           _user_id: user.id,
-          _role: 'admin'
+          _role: "admin",
         });
         setIsAdmin(!!data);
       }
@@ -56,7 +62,7 @@ export default function DashboardLayout() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/login');
+    navigate("/login");
   };
 
   if (isLoading) {
@@ -81,14 +87,18 @@ export default function DashboardLayout() {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSidebarOpen(true)}
+          >
             <Menu className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
               <UtensilsCrossed className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="font-bold">MakanSekolah</span>
+            <span className="font-bold">Dapoer-Attauhid</span>
           </div>
         </div>
         <Link to="/dashboard/cart" className="relative">
@@ -116,7 +126,7 @@ export default function DashboardLayout() {
         className={cn(
           "fixed top-0 left-0 h-full w-72 bg-card border-r border-border z-50 transition-transform duration-300",
           "lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex flex-col h-full">
@@ -126,9 +136,14 @@ export default function DashboardLayout() {
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-primary">
                 <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">MakanSekolah</span>
+              <span className="font-bold text-lg">Dapoer-Attauhid</span>
             </div>
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setSidebarOpen(false)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            >
               <X className="w-5 h-5" />
             </Button>
           </div>
@@ -138,12 +153,18 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                 <span className="text-primary font-bold">
-                  {(profile?.full_name || user?.email || 'U').charAt(0).toUpperCase()}
+                  {(profile?.full_name || user?.email || "U")
+                    .charAt(0)
+                    .toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-foreground truncate">{profile?.full_name || 'User'}</p>
-                <p className="text-sm text-muted-foreground truncate">{user?.email}</p>
+                <p className="font-semibold text-foreground truncate">
+                  {profile?.full_name || "User"}
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {user?.email}
+                </p>
               </div>
             </div>
           </div>
@@ -162,13 +183,16 @@ export default function DashboardLayout() {
                     "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
                     isActive
                       ? "bg-primary text-primary-foreground shadow-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
                   <Icon className="w-5 h-5" />
                   <span className="font-medium">{item.label}</span>
-                  {item.to === '/dashboard/cart' && cartItemCount > 0 && (
-                    <Badge variant={isActive ? "secondary" : "default"} className="ml-auto">
+                  {item.to === "/dashboard/cart" && cartItemCount > 0 && (
+                    <Badge
+                      variant={isActive ? "secondary" : "default"}
+                      className="ml-auto"
+                    >
                       {cartItemCount}
                     </Badge>
                   )}

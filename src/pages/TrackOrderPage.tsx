@@ -1,13 +1,13 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { usePayment } from '@/hooks/usePayment';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { usePayment } from "@/hooks/usePayment";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import {
   Search,
   UtensilsCrossed,
@@ -21,9 +21,9 @@ import {
   CreditCard,
   ExternalLink,
   Download,
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { generateGuestInvoicePdf } from '@/utils/generateInvoicePdf';
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { generateGuestInvoicePdf } from "@/utils/generateInvoicePdf";
 
 interface OrderItem {
   id: string;
@@ -52,21 +52,27 @@ interface OrderData {
   order_items: OrderItem[];
 }
 
-const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  pending: { label: 'Menunggu Pembayaran', variant: 'secondary' },
-  confirmed: { label: 'Dikonfirmasi', variant: 'default' },
-  paid: { label: 'Lunas', variant: 'default' },
-  processing: { label: 'Diproses', variant: 'default' },
-  completed: { label: 'Selesai', variant: 'default' },
-  cancelled: { label: 'Dibatalkan', variant: 'destructive' },
-  expired: { label: 'Kedaluwarsa', variant: 'destructive' },
-  failed: { label: 'Gagal', variant: 'destructive' },
+const statusLabels: Record<
+  string,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  pending: { label: "Menunggu Pembayaran", variant: "secondary" },
+  confirmed: { label: "Dikonfirmasi", variant: "default" },
+  paid: { label: "Lunas", variant: "default" },
+  processing: { label: "Diproses", variant: "default" },
+  completed: { label: "Selesai", variant: "default" },
+  cancelled: { label: "Dibatalkan", variant: "destructive" },
+  expired: { label: "Kedaluwarsa", variant: "destructive" },
+  failed: { label: "Gagal", variant: "destructive" },
 };
 
 export default function TrackOrderPage() {
   const { toast } = useToast();
   const { initiateGuestPayment, openPaymentModal, isProcessing } = usePayment();
-  const [orderCode, setOrderCode] = useState('');
+  const [orderCode, setOrderCode] = useState("");
   const [order, setOrder] = useState<OrderData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -74,9 +80,9 @@ export default function TrackOrderPage() {
   const handleSearch = async () => {
     if (!orderCode.trim()) {
       toast({
-        title: 'Kode Pesanan Kosong',
-        description: 'Silakan masukkan kode pesanan',
-        variant: 'destructive',
+        title: "Kode Pesanan Kosong",
+        description: "Silakan masukkan kode pesanan",
+        variant: "destructive",
       });
       return;
     }
@@ -86,8 +92,9 @@ export default function TrackOrderPage() {
 
     try {
       const { data, error } = await supabase
-        .from('orders')
-        .select(`
+        .from("orders")
+        .select(
+          `
           id,
           order_code,
           guest_name,
@@ -107,18 +114,19 @@ export default function TrackOrderPage() {
             subtotal,
             menu_item:menu_items(name, image_url)
           )
-        `)
-        .eq('order_code', orderCode.trim().toUpperCase())
+        `,
+        )
+        .eq("order_code", orderCode.trim().toUpperCase())
         .maybeSingle();
 
       if (error) throw error;
       setOrder(data);
     } catch (error) {
-      console.error('Error searching order:', error);
+      console.error("Error searching order:", error);
       toast({
-        title: 'Error',
-        description: 'Gagal mencari pesanan',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal mencari pesanan",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -131,9 +139,9 @@ export default function TrackOrderPage() {
     // Only allow guest order payment from this page
     if (order.user_id !== null) {
       toast({
-        title: 'Login Diperlukan',
-        description: 'Silakan login untuk membayar pesanan ini',
-        variant: 'destructive',
+        title: "Login Diperlukan",
+        description: "Silakan login untuk membayar pesanan ini",
+        variant: "destructive",
       });
       return;
     }
@@ -149,7 +157,7 @@ export default function TrackOrderPage() {
         () => {
           // On pending
           handleSearch();
-        }
+        },
       );
       return;
     }
@@ -158,8 +166,10 @@ export default function TrackOrderPage() {
     const paymentData = await initiateGuestPayment(order.id);
     if (paymentData?.snapToken) {
       // Update local state with new token
-      setOrder(prev => prev ? { ...prev, snap_token: paymentData.snapToken } : null);
-      
+      setOrder((prev) =>
+        prev ? { ...prev, snap_token: paymentData.snapToken } : null,
+      );
+
       openPaymentModal(
         paymentData.snapToken,
         () => {
@@ -167,17 +177,19 @@ export default function TrackOrderPage() {
         },
         () => {
           handleSearch();
-        }
+        },
       );
     }
   };
 
   const getStatusInfo = (status: string) => {
-    return statusLabels[status] || { label: status, variant: 'secondary' as const };
+    return (
+      statusLabels[status] || { label: status, variant: "secondary" as const }
+    );
   };
 
-  const isPending = order?.status === 'pending';
-  const isPaid = order?.status === 'paid' || order?.status === 'confirmed';
+  const isPending = order?.status === "pending";
+  const isPaid = order?.status === "paid" || order?.status === "confirmed";
   const isGuestOrder = order?.user_id === null;
 
   return (
@@ -189,9 +201,9 @@ export default function TrackOrderPage() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">MakanSekolah</span>
+            <span className="text-xl font-bold">Dapoer-Attauhid</span>
           </Link>
-          
+
           <div className="flex items-center gap-3">
             <Link to="/login">
               <Button variant="ghost">Masuk</Button>
@@ -210,7 +222,9 @@ export default function TrackOrderPage() {
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <Package className="w-8 h-8 text-primary" />
             </div>
-            <h1 className="text-2xl lg:text-3xl font-bold mb-2">Lacak Pesanan</h1>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-2">
+              Lacak Pesanan
+            </h1>
             <p className="text-muted-foreground">
               Masukkan kode pesanan untuk melihat status
             </p>
@@ -225,10 +239,10 @@ export default function TrackOrderPage() {
                   value={orderCode}
                   onChange={(e) => setOrderCode(e.target.value.toUpperCase())}
                   className="font-mono text-lg"
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 />
-                <Button 
-                  variant="hero" 
+                <Button
+                  variant="hero"
                   onClick={handleSearch}
                   disabled={isLoading}
                 >
@@ -254,10 +268,15 @@ export default function TrackOrderPage() {
                         <div className="text-center space-y-4">
                           <div className="flex items-center justify-center gap-2 text-primary">
                             <CreditCard className="w-5 h-5" />
-                            <span className="font-semibold">Lakukan Pembayaran</span>
+                            <span className="font-semibold">
+                              Lakukan Pembayaran
+                            </span>
                           </div>
                           <p className="text-sm text-muted-foreground">
-                            Total: <span className="font-bold text-foreground">Rp {order.total_amount.toLocaleString('id-ID')}</span>
+                            Total:{" "}
+                            <span className="font-bold text-foreground">
+                              Rp {order.total_amount.toLocaleString("id-ID")}
+                            </span>
                           </p>
                           <Button
                             variant="hero"
@@ -278,11 +297,11 @@ export default function TrackOrderPage() {
                               </>
                             )}
                           </Button>
-                          
+
                           {order.payment_url && (
-                            <a 
-                              href={order.payment_url} 
-                              target="_blank" 
+                            <a
+                              href={order.payment_url}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm text-primary hover:underline flex items-center justify-center gap-1"
                             >
@@ -298,7 +317,9 @@ export default function TrackOrderPage() {
                   <Card>
                     <CardHeader>
                       <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Detail Pesanan</CardTitle>
+                        <CardTitle className="text-lg">
+                          Detail Pesanan
+                        </CardTitle>
                         <Badge variant={getStatusInfo(order.status).variant}>
                           {getStatusInfo(order.status).label}
                         </Badge>
@@ -307,7 +328,9 @@ export default function TrackOrderPage() {
                     <CardContent className="space-y-4">
                       {/* Order Code */}
                       <div className="p-3 rounded-lg bg-muted text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Kode Pesanan</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Kode Pesanan
+                        </p>
                         <p className="text-xl font-bold font-mono text-primary">
                           {order.order_code}
                         </p>
@@ -319,44 +342,68 @@ export default function TrackOrderPage() {
                           <div className="flex items-center gap-2 text-sm">
                             <User className="w-4 h-4 text-muted-foreground" />
                             <span className="text-muted-foreground">Nama:</span>
-                            <span className="font-medium">{order.guest_name}</span>
+                            <span className="font-medium">
+                              {order.guest_name}
+                            </span>
                           </div>
                         )}
                         {order.guest_phone && (
                           <div className="flex items-center gap-2 text-sm">
                             <Phone className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">No. HP:</span>
-                            <span className="font-medium">{order.guest_phone}</span>
+                            <span className="text-muted-foreground">
+                              No. HP:
+                            </span>
+                            <span className="font-medium">
+                              {order.guest_phone}
+                            </span>
                           </div>
                         )}
                         {order.guest_class && (
                           <div className="flex items-center gap-2 text-sm">
                             <School className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-muted-foreground">Kelas:</span>
-                            <span className="font-medium">{order.guest_class}</span>
+                            <span className="text-muted-foreground">
+                              Kelas:
+                            </span>
+                            <span className="font-medium">
+                              {order.guest_class}
+                            </span>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-sm">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">Tanggal Pengiriman:</span>
+                          <span className="text-muted-foreground">
+                            Tanggal Pengiriman:
+                          </span>
                           <span className="font-medium">
                             {order.delivery_date
-                              ? format(new Date(order.delivery_date), 'EEEE, d MMMM yyyy', { locale: id })
-                              : '-'}
+                              ? format(
+                                  new Date(order.delivery_date),
+                                  "EEEE, d MMMM yyyy",
+                                  { locale: id },
+                                )
+                              : "-"}
                           </span>
                         </div>
                       </div>
 
                       {/* Order Items */}
                       <div className="border-t border-border pt-4">
-                        <p className="text-sm font-medium mb-2">Item Pesanan:</p>
+                        <p className="text-sm font-medium mb-2">
+                          Item Pesanan:
+                        </p>
                         <div className="space-y-2">
                           {order.order_items.map((item) => (
-                            <div key={item.id} className="flex justify-between text-sm">
+                            <div
+                              key={item.id}
+                              className="flex justify-between text-sm"
+                            >
                               <span className="text-muted-foreground">
-                                {item.menu_item?.name || 'Menu tidak tersedia'} x{item.quantity}
+                                {item.menu_item?.name || "Menu tidak tersedia"}{" "}
+                                x{item.quantity}
                               </span>
-                              <span>Rp {item.subtotal.toLocaleString('id-ID')}</span>
+                              <span>
+                                Rp {item.subtotal.toLocaleString("id-ID")}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -367,7 +414,7 @@ export default function TrackOrderPage() {
                         <div className="flex justify-between items-center">
                           <span className="font-medium">Total Pembayaran</span>
                           <span className="text-xl font-bold text-primary">
-                            Rp {order.total_amount.toLocaleString('id-ID')}
+                            Rp {order.total_amount.toLocaleString("id-ID")}
                           </span>
                         </div>
                       </div>
@@ -375,8 +422,8 @@ export default function TrackOrderPage() {
                       {/* Download Invoice Button */}
                       {isPaid && isGuestOrder && (
                         <div className="border-t border-border pt-4">
-                          <Button 
-                            variant="hero" 
+                          <Button
+                            variant="hero"
                             className="w-full"
                             onClick={() => generateGuestInvoicePdf(order)}
                           >
@@ -388,7 +435,12 @@ export default function TrackOrderPage() {
 
                       {/* Order Time */}
                       <div className="text-sm text-muted-foreground text-center">
-                        Pesanan dibuat: {format(new Date(order.created_at), 'd MMMM yyyy, HH:mm', { locale: id })}
+                        Pesanan dibuat:{" "}
+                        {format(
+                          new Date(order.created_at),
+                          "d MMMM yyyy, HH:mm",
+                          { locale: id },
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -399,7 +451,9 @@ export default function TrackOrderPage() {
                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                       <AlertCircle className="w-8 h-8 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-medium mb-2">Pesanan Tidak Ditemukan</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      Pesanan Tidak Ditemukan
+                    </h3>
                     <p className="text-muted-foreground text-sm">
                       Pastikan kode pesanan yang Anda masukkan benar
                     </p>

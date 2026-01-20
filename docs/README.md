@@ -1,4 +1,4 @@
-# MakanSekolah - School Catering Order System
+# Dapoer-Attauhid - School Catering Order System
 
 Platform pemesanan makanan sekolah dengan integrasi pembayaran Midtrans.
 
@@ -15,7 +15,7 @@ Platform pemesanan makanan sekolah dengan integrasi pembayaran Midtrans.
 ```bash
 # Clone repository
 git clone <repository-url>
-cd makansekolah
+cd dapoer-attauhid
 
 # Install dependencies
 npm install

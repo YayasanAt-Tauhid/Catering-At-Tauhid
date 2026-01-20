@@ -1,20 +1,35 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { UtensilsCrossed, Mail, Lock, User, Phone, ArrowRight, Check } from 'lucide-react';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import {
+  UtensilsCrossed,
+  Mail,
+  Lock,
+  User,
+  Phone,
+  ArrowRight,
+  Check,
+} from "lucide-react";
 
 export default function Register() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const { signUp } = useAuth();
@@ -22,61 +37,68 @@ export default function Register() {
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       toast({
-        title: 'Error',
-        description: 'Password tidak cocok',
-        variant: 'destructive',
+        title: "Error",
+        description: "Password tidak cocok",
+        variant: "destructive",
       });
       return;
     }
 
     if (formData.password.length < 6) {
       toast({
-        title: 'Error',
-        description: 'Password minimal 6 karakter',
-        variant: 'destructive',
+        title: "Error",
+        description: "Password minimal 6 karakter",
+        variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
 
-    const { error } = await signUp(formData.email, formData.password, formData.name, formData.phone);
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      formData.name,
+      formData.phone,
+    );
 
     if (error) {
       let errorMessage = error.message;
-      if (error.message.includes('already registered')) {
-        errorMessage = 'Email sudah terdaftar. Silakan login atau gunakan email lain.';
+      if (error.message.includes("already registered")) {
+        errorMessage =
+          "Email sudah terdaftar. Silakan login atau gunakan email lain.";
       }
       toast({
-        title: 'Pendaftaran Gagal',
+        title: "Pendaftaran Gagal",
         description: errorMessage,
-        variant: 'destructive',
+        variant: "destructive",
       });
       setIsLoading(false);
       return;
     }
 
     toast({
-      title: 'Pendaftaran Berhasil',
-      description: 'Silakan cek email Anda untuk verifikasi atau login langsung jika confirm email dimatikan.',
+      title: "Pendaftaran Berhasil",
+      description:
+        "Silakan cek email Anda untuk verifikasi atau login langsung jika confirm email dimatikan.",
     });
-    navigate('/login');
+    navigate("/login");
     setIsLoading(false);
   };
 
   const benefits = [
-    'Pesan makanan sehat untuk anak',
-    'Pantau riwayat pesanan dengan mudah',
-    'Pembayaran aman dan fleksibel',
-    'Notifikasi real-time',
+    "Pesan makanan sehat untuk anak",
+    "Pantau riwayat pesanan dengan mudah",
+    "Pembayaran aman dan fleksibel",
+    "Notifikasi real-time",
   ];
 
   return (
@@ -90,10 +112,11 @@ export default function Register() {
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Bergabung dengan
             <br />
-            <span className="text-primary">MakanSekolah</span>
+            <span className="text-primary">Dapoer-Attauhid</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Platform pemesanan makanan sekolah terpercaya untuk memastikan anak Anda mendapat nutrisi terbaik.
+            Platform pemesanan makanan sekolah terpercaya untuk memastikan anak
+            Anda mendapat nutrisi terbaik.
           </p>
           <ul className="space-y-4">
             {benefits.map((benefit, index) => (
@@ -114,7 +137,7 @@ export default function Register() {
               <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
                 <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold">MakanSekolah</span>
+              <span className="text-xl font-bold">Dapoer-Attauhid</span>
             </div>
             <CardTitle className="text-2xl">Buat Akun Baru</CardTitle>
             <CardDescription>
@@ -206,13 +229,22 @@ export default function Register() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button type="submit" variant="hero" size="lg" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Memproses...' : 'Daftar Sekarang'}
+              <Button
+                type="submit"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Memproses..." : "Daftar Sekarang"}
                 <ArrowRight className="w-5 h-5" />
               </Button>
               <p className="text-sm text-muted-foreground text-center">
-                Sudah punya akun?{' '}
-                <Link to="/login" className="text-primary font-semibold hover:underline">
+                Sudah punya akun?{" "}
+                <Link
+                  to="/login"
+                  className="text-primary font-semibold hover:underline"
+                >
                   Masuk di sini
                 </Link>
               </p>

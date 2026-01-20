@@ -2,7 +2,7 @@
 
 ## Deskripsi Umum Aplikasi
 
-**MakanSekolah (KidEats)** adalah aplikasi web untuk pemesanan makanan/katering sekolah. Platform ini memungkinkan orang tua untuk memesan makanan bagi anak-anak mereka di sekolah dengan fitur pembayaran online terintegrasi Midtrans.
+**Dapoer-Attauhid** adalah aplikasi web untuk pemesanan makanan/katering sekolah. Platform ini memungkinkan orang tua untuk memesan makanan bagi anak-anak mereka di sekolah dengan fitur pembayaran online terintegrasi Midtrans.
 
 ---
 

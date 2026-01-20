@@ -1,6 +1,6 @@
-import { Order } from '@/hooks/useOrders';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { Order } from "@/hooks/useOrders";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 
 interface GuestOrderData {
   id: string;
@@ -67,23 +67,23 @@ export function generateInvoicePdf(order: Order) {
   <div class="invoice">
     <div class="header">
       <div>
-        <div class="logo">MakanSekolah</div>
+        <div class="logo">Dapoer-Attauhid</div>
         <div class="logo-sub">Layanan Catering Sekolah</div>
       </div>
       <div class="invoice-info">
         <div class="invoice-number">INV-${order.id.slice(0, 8).toUpperCase()}</div>
-        <div class="invoice-date">${format(new Date(order.created_at), 'd MMMM yyyy', { locale: id })}</div>
-        <div class="status ${order.status}">${order.status === 'paid' ? 'LUNAS' : 'PENDING'}</div>
+        <div class="invoice-date">${format(new Date(order.created_at), "d MMMM yyyy", { locale: id })}</div>
+        <div class="status ${order.status}">${order.status === "paid" ? "LUNAS" : "PENDING"}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Informasi Penerima</div>
       <div class="recipient-box">
-        <div class="recipient-name">${order.recipient?.name || '-'}</div>
-        <div class="recipient-class">Kelas: ${order.recipient?.class || '-'}</div>
+        <div class="recipient-name">${order.recipient?.name || "-"}</div>
+        <div class="recipient-class">Kelas: ${order.recipient?.class || "-"}</div>
         <div class="delivery-date">
-          <strong>Tanggal Pengiriman:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'EEEE, d MMMM yyyy', { locale: id }) : '-'}
+          <strong>Tanggal Pengiriman:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), "EEEE, d MMMM yyyy", { locale: id }) : "-"}
         </div>
       </div>
     </div>
@@ -100,24 +100,30 @@ export function generateInvoicePdf(order: Order) {
           </tr>
         </thead>
         <tbody>
-          ${order.order_items?.map(item => `
+          ${
+            order.order_items
+              ?.map(
+                (item) => `
             <tr>
-              <td>${item.menu_item?.name || 'Menu'}</td>
+              <td>${item.menu_item?.name || "Menu"}</td>
               <td>${item.quantity}</td>
-              <td>Rp ${item.unit_price.toLocaleString('id-ID')}</td>
-              <td>Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+              <td>Rp ${item.unit_price.toLocaleString("id-ID")}</td>
+              <td>Rp ${item.subtotal.toLocaleString("id-ID")}</td>
             </tr>
-          `).join('') || '<tr><td colspan="4">Tidak ada item</td></tr>'}
+          `,
+              )
+              .join("") || '<tr><td colspan="4">Tidak ada item</td></tr>'
+          }
           <tr class="total-row">
             <td colspan="3">Total</td>
-            <td>Rp ${order.total_amount.toLocaleString('id-ID')}</td>
+            <td>Rp ${order.total_amount.toLocaleString("id-ID")}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="footer">
-      <p>Terima kasih telah menggunakan layanan MakanSekolah</p>
+      <p>Terima kasih telah menggunakan layanan Dapoer-Attauhid</p>
       <p>Invoice ini dibuat secara otomatis dan sah tanpa tanda tangan</p>
     </div>
   </div>
@@ -128,7 +134,7 @@ export function generateInvoicePdf(order: Order) {
 </html>
   `;
 
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open("", "_blank");
   if (printWindow) {
     printWindow.document.write(invoiceContent);
     printWindow.document.close();
@@ -136,8 +142,8 @@ export function generateInvoicePdf(order: Order) {
 }
 
 export function generateGuestInvoicePdf(order: GuestOrderData) {
-  const isPaid = order.status === 'paid' || order.status === 'confirmed';
-  
+  const isPaid = order.status === "paid" || order.status === "confirmed";
+
   const invoiceContent = `
 <!DOCTYPE html>
 <html>
@@ -182,24 +188,24 @@ export function generateGuestInvoicePdf(order: GuestOrderData) {
   <div class="invoice">
     <div class="header">
       <div>
-        <div class="logo">MakanSekolah</div>
+        <div class="logo">Dapoer-Attauhid</div>
         <div class="logo-sub">Layanan Catering Sekolah</div>
       </div>
       <div class="invoice-info">
-        <div class="invoice-number">${order.order_code || 'INV-' + order.id.slice(0, 8).toUpperCase()}</div>
-        <div class="invoice-date">${format(new Date(order.created_at), 'd MMMM yyyy', { locale: id })}</div>
-        <div class="status ${order.status}">${isPaid ? 'LUNAS' : 'PENDING'}</div>
+        <div class="invoice-number">${order.order_code || "INV-" + order.id.slice(0, 8).toUpperCase()}</div>
+        <div class="invoice-date">${format(new Date(order.created_at), "d MMMM yyyy", { locale: id })}</div>
+        <div class="status ${order.status}">${isPaid ? "LUNAS" : "PENDING"}</div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Informasi Pemesan</div>
       <div class="recipient-box">
-        <div class="recipient-name">${order.guest_name || '-'}</div>
-        <div class="recipient-detail">No. HP: ${order.guest_phone || '-'}</div>
-        <div class="recipient-detail">Kelas: ${order.guest_class || '-'}</div>
+        <div class="recipient-name">${order.guest_name || "-"}</div>
+        <div class="recipient-detail">No. HP: ${order.guest_phone || "-"}</div>
+        <div class="recipient-detail">Kelas: ${order.guest_class || "-"}</div>
         <div class="delivery-date">
-          <strong>Tanggal Pengiriman:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), 'EEEE, d MMMM yyyy', { locale: id }) : '-'}
+          <strong>Tanggal Pengiriman:</strong> ${order.delivery_date ? format(new Date(order.delivery_date), "EEEE, d MMMM yyyy", { locale: id }) : "-"}
         </div>
       </div>
     </div>
@@ -216,24 +222,30 @@ export function generateGuestInvoicePdf(order: GuestOrderData) {
           </tr>
         </thead>
         <tbody>
-          ${order.order_items?.map(item => `
+          ${
+            order.order_items
+              ?.map(
+                (item) => `
             <tr>
-              <td>${item.menu_item?.name || 'Menu'}</td>
+              <td>${item.menu_item?.name || "Menu"}</td>
               <td>${item.quantity}</td>
-              <td>Rp ${item.unit_price.toLocaleString('id-ID')}</td>
-              <td>Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+              <td>Rp ${item.unit_price.toLocaleString("id-ID")}</td>
+              <td>Rp ${item.subtotal.toLocaleString("id-ID")}</td>
             </tr>
-          `).join('') || '<tr><td colspan="4">Tidak ada item</td></tr>'}
+          `,
+              )
+              .join("") || '<tr><td colspan="4">Tidak ada item</td></tr>'
+          }
           <tr class="total-row">
             <td colspan="3">Total</td>
-            <td>Rp ${order.total_amount.toLocaleString('id-ID')}</td>
+            <td>Rp ${order.total_amount.toLocaleString("id-ID")}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <div class="footer">
-      <p>Terima kasih telah menggunakan layanan MakanSekolah</p>
+      <p>Terima kasih telah menggunakan layanan Dapoer-Attauhid</p>
       <p>Invoice ini dibuat secara otomatis dan sah tanpa tanda tangan</p>
     </div>
   </div>
@@ -244,7 +256,7 @@ export function generateGuestInvoicePdf(order: GuestOrderData) {
 </html>
   `;
 
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open("", "_blank");
   if (printWindow) {
     printWindow.document.write(invoiceContent);
     printWindow.document.close();
@@ -253,7 +265,7 @@ export function generateGuestInvoicePdf(order: GuestOrderData) {
 
 export function generateCombinedInvoicePdf(orders: Order[]) {
   const totalAmount = orders.reduce((sum, o) => sum + o.total_amount, 0);
-  
+
   const invoiceContent = `
 <!DOCTYPE html>
 <html>
@@ -290,23 +302,25 @@ export function generateCombinedInvoicePdf(orders: Order[]) {
   <div class="invoice">
     <div class="header">
       <div>
-        <div class="logo">MakanSekolah</div>
+        <div class="logo">Dapoer-Attauhid</div>
         <div class="logo-sub">Invoice Gabungan</div>
       </div>
       <div class="invoice-info">
         <div class="invoice-number">INV-COMBINED</div>
-        <div class="invoice-date">${format(new Date(), 'd MMMM yyyy', { locale: id })}</div>
+        <div class="invoice-date">${format(new Date(), "d MMMM yyyy", { locale: id })}</div>
       </div>
     </div>
 
-    ${orders.map(order => `
+    ${orders
+      .map(
+        (order) => `
       <div class="order-section">
         <div class="order-header">
           <div>
             <div class="order-id">Order #${order.id.slice(0, 8)}</div>
-            <div class="recipient">${order.recipient?.name || '-'} - Kelas ${order.recipient?.class || '-'}</div>
+            <div class="recipient">${order.recipient?.name || "-"} - Kelas ${order.recipient?.class || "-"}</div>
           </div>
-          <div class="recipient">${order.delivery_date ? format(new Date(order.delivery_date), 'd MMM yyyy', { locale: id }) : '-'}</div>
+          <div class="recipient">${order.delivery_date ? format(new Date(order.delivery_date), "d MMM yyyy", { locale: id }) : "-"}</div>
         </div>
         <table>
           <thead>
@@ -317,26 +331,34 @@ export function generateCombinedInvoicePdf(orders: Order[]) {
             </tr>
           </thead>
           <tbody>
-            ${order.order_items?.map(item => `
+            ${
+              order.order_items
+                ?.map(
+                  (item) => `
               <tr>
-                <td>${item.menu_item?.name || 'Menu'}</td>
+                <td>${item.menu_item?.name || "Menu"}</td>
                 <td>${item.quantity}</td>
-                <td>Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+                <td>Rp ${item.subtotal.toLocaleString("id-ID")}</td>
               </tr>
-            `).join('') || ''}
+            `,
+                )
+                .join("") || ""
+            }
           </tbody>
         </table>
-        <div class="order-total">Subtotal: Rp ${order.total_amount.toLocaleString('id-ID')}</div>
+        <div class="order-total">Subtotal: Rp ${order.total_amount.toLocaleString("id-ID")}</div>
       </div>
-    `).join('')}
+    `,
+      )
+      .join("")}
 
     <div class="grand-total">
       <div class="grand-total-label">Total Keseluruhan (${orders.length} Invoice)</div>
-      <div class="grand-total-amount">Rp ${totalAmount.toLocaleString('id-ID')}</div>
+      <div class="grand-total-amount">Rp ${totalAmount.toLocaleString("id-ID")}</div>
     </div>
 
     <div class="footer">
-      <p>Terima kasih telah menggunakan layanan MakanSekolah</p>
+      <p>Terima kasih telah menggunakan layanan Dapoer-Attauhid</p>
       <p>Invoice ini dibuat secara otomatis dan sah tanpa tanda tangan</p>
     </div>
   </div>
@@ -347,7 +369,7 @@ export function generateCombinedInvoicePdf(orders: Order[]) {
 </html>
   `;
 
-  const printWindow = window.open('', '_blank');
+  const printWindow = window.open("", "_blank");
   if (printWindow) {
     printWindow.document.write(invoiceContent);
     printWindow.document.close();

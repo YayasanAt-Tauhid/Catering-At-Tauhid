@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { supabase } from '@/integrations/supabase/client';
-import { usePayment } from '@/hooks/usePayment';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
+import { usePayment } from "@/hooks/usePayment";
+import { format } from "date-fns";
+import { id } from "date-fns/locale";
 import {
   CheckCircle,
   Copy,
@@ -22,9 +22,9 @@ import {
   Loader2,
   ExternalLink,
   Download,
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { generateGuestInvoicePdf } from '@/utils/generateInvoicePdf';
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { generateGuestInvoicePdf } from "@/utils/generateInvoicePdf";
 
 interface OrderItem {
   id: string;
@@ -52,12 +52,15 @@ interface OrderData {
   order_items: OrderItem[];
 }
 
-const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' }> = {
-  pending: { label: 'Menunggu Pembayaran', variant: 'secondary' },
-  confirmed: { label: 'Dikonfirmasi', variant: 'default' },
-  paid: { label: 'Lunas', variant: 'default' },
-  cancelled: { label: 'Dibatalkan', variant: 'destructive' },
-  expired: { label: 'Kedaluwarsa', variant: 'destructive' },
+const statusLabels: Record<
+  string,
+  { label: string; variant: "default" | "secondary" | "destructive" }
+> = {
+  pending: { label: "Menunggu Pembayaran", variant: "secondary" },
+  confirmed: { label: "Dikonfirmasi", variant: "default" },
+  paid: { label: "Lunas", variant: "default" },
+  cancelled: { label: "Dibatalkan", variant: "destructive" },
+  expired: { label: "Kedaluwarsa", variant: "destructive" },
 };
 
 export default function OrderConfirmationPage() {
@@ -72,8 +75,9 @@ export default function OrderConfirmationPage() {
 
     try {
       const { data, error } = await supabase
-        .from('orders')
-        .select(`
+        .from("orders")
+        .select(
+          `
           id,
           order_code,
           guest_name,
@@ -92,14 +96,15 @@ export default function OrderConfirmationPage() {
             subtotal,
             menu_item:menu_items(name, image_url)
           )
-        `)
-        .eq('id', orderId)
+        `,
+        )
+        .eq("id", orderId)
         .maybeSingle();
 
       if (error) throw error;
       setOrder(data);
     } catch (error) {
-      console.error('Error fetching order:', error);
+      console.error("Error fetching order:", error);
     } finally {
       setIsLoading(false);
     }
@@ -113,8 +118,8 @@ export default function OrderConfirmationPage() {
     if (order?.order_code) {
       navigator.clipboard.writeText(order.order_code);
       toast({
-        title: 'Disalin!',
-        description: 'Kode pesanan berhasil disalin',
+        title: "Disalin!",
+        description: "Kode pesanan berhasil disalin",
       });
     }
   };
@@ -133,7 +138,7 @@ export default function OrderConfirmationPage() {
         () => {
           // On pending
           fetchOrder();
-        }
+        },
       );
       return;
     }
@@ -150,13 +155,15 @@ export default function OrderConfirmationPage() {
         () => {
           // On pending
           fetchOrder();
-        }
+        },
       );
     }
   };
 
   const getStatusInfo = (status: string) => {
-    return statusLabels[status] || { label: status, variant: 'secondary' as const };
+    return (
+      statusLabels[status] || { label: status, variant: "secondary" as const }
+    );
   };
 
   if (isLoading) {
@@ -167,7 +174,7 @@ export default function OrderConfirmationPage() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">MakanSekolah</span>
+            <span className="text-xl font-bold">Dapoer-Attauhid</span>
           </Link>
         </header>
         <main className="container mx-auto px-4 py-8">
@@ -188,12 +195,14 @@ export default function OrderConfirmationPage() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">MakanSekolah</span>
+            <span className="text-xl font-bold">Dapoer-Attauhid</span>
           </Link>
         </header>
         <div className="flex-1 flex flex-col items-center justify-center px-4">
           <h2 className="text-2xl font-bold mb-2">Pesanan Tidak Ditemukan</h2>
-          <p className="text-muted-foreground mb-6">Pesanan yang Anda cari tidak ada</p>
+          <p className="text-muted-foreground mb-6">
+            Pesanan yang Anda cari tidak ada
+          </p>
           <Link to="/">
             <Button variant="hero">Kembali ke Beranda</Button>
           </Link>
@@ -202,8 +211,8 @@ export default function OrderConfirmationPage() {
     );
   }
 
-  const isPending = order.status === 'pending';
-  const isPaid = order.status === 'paid' || order.status === 'confirmed';
+  const isPending = order.status === "pending";
+  const isPaid = order.status === "paid" || order.status === "confirmed";
 
   return (
     <div className="min-h-screen gradient-warm">
@@ -213,7 +222,7 @@ export default function OrderConfirmationPage() {
           <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
             <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold">MakanSekolah</span>
+          <span className="text-xl font-bold">Dapoer-Attauhid</span>
         </Link>
       </header>
 
@@ -221,32 +230,36 @@ export default function OrderConfirmationPage() {
         <div className="max-w-lg mx-auto space-y-6">
           {/* Success Header */}
           <div className="text-center animate-fade-in">
-            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              isPaid 
-                ? 'bg-green-100 dark:bg-green-900/30' 
-                : 'bg-primary/10'
-            }`}>
-              <CheckCircle className={`w-10 h-10 ${
-                isPaid ? 'text-green-600' : 'text-primary'
-              }`} />
+            <div
+              className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                isPaid ? "bg-green-100 dark:bg-green-900/30" : "bg-primary/10"
+              }`}
+            >
+              <CheckCircle
+                className={`w-10 h-10 ${
+                  isPaid ? "text-green-600" : "text-primary"
+                }`}
+              />
             </div>
             <h1 className="text-2xl font-bold mb-2">
-              {isPaid ? 'Pembayaran Berhasil!' : 'Pesanan Berhasil Dibuat!'}
+              {isPaid ? "Pembayaran Berhasil!" : "Pesanan Berhasil Dibuat!"}
             </h1>
             <p className="text-muted-foreground">
-              {isPaid 
-                ? 'Terima kasih, pesanan Anda sedang diproses' 
-                : 'Simpan kode pesanan dan lakukan pembayaran'}
+              {isPaid
+                ? "Terima kasih, pesanan Anda sedang diproses"
+                : "Simpan kode pesanan dan lakukan pembayaran"}
             </p>
           </div>
 
           {/* Order Code Card */}
           <Card className="border-2 border-primary">
             <CardContent className="p-6 text-center">
-              <p className="text-sm text-muted-foreground mb-2">Kode Pesanan Anda</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Kode Pesanan Anda
+              </p>
               <div className="flex items-center justify-center gap-3">
                 <span className="text-3xl font-bold text-primary font-mono">
-                  {order.order_code || '-'}
+                  {order.order_code || "-"}
                 </span>
                 <Button size="icon" variant="outline" onClick={copyOrderCode}>
                   <Copy className="w-4 h-4" />
@@ -265,7 +278,10 @@ export default function OrderConfirmationPage() {
                     <span className="font-semibold">Lakukan Pembayaran</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Total: <span className="font-bold text-foreground">Rp {order.total_amount.toLocaleString('id-ID')}</span>
+                    Total:{" "}
+                    <span className="font-bold text-foreground">
+                      Rp {order.total_amount.toLocaleString("id-ID")}
+                    </span>
                   </p>
                   <Button
                     variant="hero"
@@ -286,11 +302,11 @@ export default function OrderConfirmationPage() {
                       </>
                     )}
                   </Button>
-                  
+
                   {order.payment_url && (
-                    <a 
-                      href={order.payment_url} 
-                      target="_blank" 
+                    <a
+                      href={order.payment_url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline flex items-center justify-center gap-1"
                     >
@@ -336,8 +352,12 @@ export default function OrderConfirmationPage() {
                   <span className="text-muted-foreground">Tanggal:</span>
                   <span className="font-medium">
                     {order.delivery_date
-                      ? format(new Date(order.delivery_date), 'EEEE, d MMMM yyyy', { locale: id })
-                      : '-'}
+                      ? format(
+                          new Date(order.delivery_date),
+                          "EEEE, d MMMM yyyy",
+                          { locale: id },
+                        )
+                      : "-"}
                   </span>
                 </div>
               </div>
@@ -348,9 +368,10 @@ export default function OrderConfirmationPage() {
                   {order.order_items.map((item) => (
                     <div key={item.id} className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        {item.menu_item?.name || 'Menu tidak tersedia'} x{item.quantity}
+                        {item.menu_item?.name || "Menu tidak tersedia"} x
+                        {item.quantity}
                       </span>
-                      <span>Rp {item.subtotal.toLocaleString('id-ID')}</span>
+                      <span>Rp {item.subtotal.toLocaleString("id-ID")}</span>
                     </div>
                   ))}
                 </div>
@@ -360,14 +381,17 @@ export default function OrderConfirmationPage() {
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total</span>
                   <span className="text-xl font-bold text-primary">
-                    Rp {order.total_amount.toLocaleString('id-ID')}
+                    Rp {order.total_amount.toLocaleString("id-ID")}
                   </span>
                 </div>
               </div>
 
               {/* Order Time */}
               <div className="text-sm text-muted-foreground text-center">
-                Pesanan dibuat: {format(new Date(order.created_at), 'd MMMM yyyy, HH:mm', { locale: id })}
+                Pesanan dibuat:{" "}
+                {format(new Date(order.created_at), "d MMMM yyyy, HH:mm", {
+                  locale: id,
+                })}
               </div>
             </CardContent>
           </Card>
@@ -375,9 +399,9 @@ export default function OrderConfirmationPage() {
           {/* Action Buttons */}
           <div className="space-y-3">
             {isPaid && (
-              <Button 
-                variant="hero" 
-                size="lg" 
+              <Button
+                variant="hero"
+                size="lg"
                 className="w-full"
                 onClick={() => generateGuestInvoicePdf(order)}
               >
@@ -400,7 +424,7 @@ export default function OrderConfirmationPage() {
           </div>
         </div>
       </main>
-      
+
       {/* Midtrans Snap Script */}
       <script
         type="text/javascript"

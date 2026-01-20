@@ -1,15 +1,27 @@
-import { useState } from 'react';
-import { useApp } from '@/context/AppContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { useNavigate, Link } from 'react-router-dom';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { format, addDays, isBefore, startOfDay, setHours, setMinutes, isWeekend } from 'date-fns';
-import { id } from 'date-fns/locale';
+import { useState } from "react";
+import { useApp } from "@/context/AppContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate, Link } from "react-router-dom";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  format,
+  addDays,
+  isBefore,
+  startOfDay,
+  setHours,
+  setMinutes,
+  isWeekend,
+} from "date-fns";
+import { id } from "date-fns/locale";
 import {
   CalendarIcon,
   User,
@@ -20,10 +32,10 @@ import {
   CreditCard,
   Loader2,
   ArrowLeft,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useHolidays } from '@/hooks/useHolidays';
-import { supabase } from '@/integrations/supabase/client';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useHolidays } from "@/hooks/useHolidays";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function GuestCheckoutPage() {
   const { cart, getCartTotal, clearCart } = useApp();
@@ -31,55 +43,61 @@ export default function GuestCheckoutPage() {
   const navigate = useNavigate();
   const { isHoliday } = useHolidays();
 
-  const [guestName, setGuestName] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
-  const [guestClass, setGuestClass] = useState('');
+  const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestClass, setGuestClass] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Determine available dates based on cutoff time (05:00)
   const now = new Date();
   const cutoffTime = setMinutes(setHours(new Date(), 5), 0);
-  const minDate = now > cutoffTime ? addDays(startOfDay(now), 1) : startOfDay(now);
+  const minDate =
+    now > cutoffTime ? addDays(startOfDay(now), 1) : startOfDay(now);
   const maxDate = addDays(minDate, 7);
 
   const isDateDisabled = (date: Date) => {
-    return isBefore(date, minDate) || date > maxDate || isWeekend(date) || isHoliday(date);
+    return (
+      isBefore(date, minDate) ||
+      date > maxDate ||
+      isWeekend(date) ||
+      isHoliday(date)
+    );
   };
 
   const handleCheckout = async () => {
     if (!guestName.trim()) {
       toast({
-        title: 'Nama Wajib Diisi',
-        description: 'Silakan masukkan nama Anda',
-        variant: 'destructive',
+        title: "Nama Wajib Diisi",
+        description: "Silakan masukkan nama Anda",
+        variant: "destructive",
       });
       return;
     }
 
     if (!guestPhone.trim()) {
       toast({
-        title: 'No. HP Wajib Diisi',
-        description: 'Silakan masukkan nomor handphone',
-        variant: 'destructive',
+        title: "No. HP Wajib Diisi",
+        description: "Silakan masukkan nomor handphone",
+        variant: "destructive",
       });
       return;
     }
 
     if (!guestClass.trim()) {
       toast({
-        title: 'Kelas Wajib Diisi',
-        description: 'Silakan masukkan alamat kelas',
-        variant: 'destructive',
+        title: "Kelas Wajib Diisi",
+        description: "Silakan masukkan alamat kelas",
+        variant: "destructive",
       });
       return;
     }
 
     if (!deliveryDate) {
       toast({
-        title: 'Pilih Tanggal',
-        description: 'Silakan pilih tanggal pengiriman',
-        variant: 'destructive',
+        title: "Pilih Tanggal",
+        description: "Silakan pilih tanggal pengiriman",
+        variant: "destructive",
       });
       return;
     }
@@ -89,21 +107,21 @@ export default function GuestCheckoutPage() {
     try {
       const totalAmount = cart.reduce(
         (sum, item) => sum + item.menuItem.price * item.quantity,
-        0
+        0,
       );
 
       // Create guest order (user_id = null)
       const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
+        .from("orders")
         .insert({
           user_id: null,
           recipient_id: null,
           guest_name: guestName.trim(),
           guest_phone: guestPhone.trim(),
           guest_class: guestClass.trim(),
-          delivery_date: format(deliveryDate, 'yyyy-MM-dd'),
+          delivery_date: format(deliveryDate, "yyyy-MM-dd"),
           total_amount: totalAmount,
-          status: 'pending',
+          status: "pending",
         })
         .select()
         .single();
@@ -111,7 +129,7 @@ export default function GuestCheckoutPage() {
       if (orderError) throw orderError;
 
       // Create order items
-      const orderItems = cart.map(item => ({
+      const orderItems = cart.map((item) => ({
         order_id: newOrder.id,
         menu_item_id: item.menuItem.id,
         quantity: item.quantity,
@@ -120,23 +138,23 @@ export default function GuestCheckoutPage() {
       }));
 
       const { error: itemsError } = await supabase
-        .from('order_items')
+        .from("order_items")
         .insert(orderItems);
 
       if (itemsError) throw itemsError;
 
       clearCart();
-      
+
       // Navigate to confirmation page with order code
-      navigate(`/order-confirmation/${newOrder.id}`, { 
-        state: { orderCode: newOrder.order_code } 
+      navigate(`/order-confirmation/${newOrder.id}`, {
+        state: { orderCode: newOrder.order_code },
       });
     } catch (error: unknown) {
-      console.error('Error creating guest order:', error);
+      console.error("Error creating guest order:", error);
       toast({
-        title: 'Error',
-        description: 'Gagal membuat pesanan. Silakan coba lagi.',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal membuat pesanan. Silakan coba lagi.",
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
@@ -151,10 +169,10 @@ export default function GuestCheckoutPage() {
             <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
               <ShoppingCart className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">MakanSekolah</span>
+            <span className="text-xl font-bold">Dapoer-Attauhid</span>
           </Link>
         </header>
-        
+
         <div className="flex-1 flex flex-col items-center justify-center animate-fade-in px-4">
           <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center mb-6">
             <ShoppingCart className="w-12 h-12 text-muted-foreground" />
@@ -178,12 +196,18 @@ export default function GuestCheckoutPage() {
       {/* Header */}
       <header className="container mx-auto px-4 py-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/guest/cart')}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/guest/cart")}
+          >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
             <h1 className="text-2xl font-bold">Checkout Tamu</h1>
-            <p className="text-muted-foreground">Lengkapi data untuk melanjutkan pesanan</p>
+            <p className="text-muted-foreground">
+              Lengkapi data untuk melanjutkan pesanan
+            </p>
           </div>
         </div>
       </header>
@@ -260,14 +284,16 @@ export default function GuestCheckoutPage() {
                     <Button
                       variant="outline"
                       className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !deliveryDate && 'text-muted-foreground'
+                        "w-full justify-start text-left font-normal",
+                        !deliveryDate && "text-muted-foreground",
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {deliveryDate
-                        ? format(deliveryDate, 'EEEE, d MMMM yyyy', { locale: id })
-                        : 'Pilih tanggal'}
+                        ? format(deliveryDate, "EEEE, d MMMM yyyy", {
+                            locale: id,
+                          })
+                        : "Pilih tanggal"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -277,7 +303,7 @@ export default function GuestCheckoutPage() {
                       onSelect={setDeliveryDate}
                       disabled={isDateDisabled}
                       initialFocus
-                      className={cn('p-3 pointer-events-auto')}
+                      className={cn("p-3 pointer-events-auto")}
                     />
                   </PopoverContent>
                 </Popover>
@@ -289,7 +315,10 @@ export default function GuestCheckoutPage() {
                     <ul className="list-disc list-inside mt-1 space-y-1 text-warning/80">
                       <li>Pemesanan maksimal 7 hari ke depan</li>
                       <li>Sabtu dan Minggu tidak tersedia</li>
-                      <li>Jika sudah lewat jam 05:00, pesanan hari ini tidak tersedia</li>
+                      <li>
+                        Jika sudah lewat jam 05:00, pesanan hari ini tidak
+                        tersedia
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -306,12 +335,18 @@ export default function GuestCheckoutPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   {cart.map((item) => (
-                    <div key={item.menuItem.id} className="flex justify-between text-sm">
+                    <div
+                      key={item.menuItem.id}
+                      className="flex justify-between text-sm"
+                    >
                       <span className="text-muted-foreground">
                         {item.menuItem.name} x{item.quantity}
                       </span>
                       <span>
-                        Rp {(item.menuItem.price * item.quantity).toLocaleString('id-ID')}
+                        Rp{" "}
+                        {(item.menuItem.price * item.quantity).toLocaleString(
+                          "id-ID",
+                        )}
                       </span>
                     </div>
                   ))}
@@ -334,7 +369,7 @@ export default function GuestCheckoutPage() {
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Tanggal</span>
                       <span className="font-medium">
-                        {format(deliveryDate, 'd MMM yyyy', { locale: id })}
+                        {format(deliveryDate, "d MMM yyyy", { locale: id })}
                       </span>
                     </div>
                   )}
@@ -343,7 +378,9 @@ export default function GuestCheckoutPage() {
                 <div className="border-t border-border pt-4">
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-primary">Rp {getCartTotal().toLocaleString('id-ID')}</span>
+                    <span className="text-primary">
+                      Rp {getCartTotal().toLocaleString("id-ID")}
+                    </span>
                   </div>
                 </div>
 
@@ -352,7 +389,13 @@ export default function GuestCheckoutPage() {
                   size="lg"
                   className="w-full"
                   onClick={handleCheckout}
-                  disabled={!guestName || !guestPhone || !guestClass || !deliveryDate || isProcessing}
+                  disabled={
+                    !guestName ||
+                    !guestPhone ||
+                    !guestClass ||
+                    !deliveryDate ||
+                    isProcessing
+                  }
                 >
                   {isProcessing ? (
                     <>
