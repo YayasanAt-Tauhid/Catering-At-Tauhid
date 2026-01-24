@@ -44,7 +44,7 @@ export default function Index() {
             alt="Dapoer-Attauhid"
             className="w-10 h-10 object-contain"
           />
-          <span className="text-xl font-bold">Dapoer Attauhid</span>
+          <span className="text-xl font-bold"> Dapoer Attauhid </span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/track">
