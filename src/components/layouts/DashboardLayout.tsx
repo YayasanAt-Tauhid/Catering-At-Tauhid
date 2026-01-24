@@ -10,7 +10,6 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  UtensilsCrossed,
   Home,
   ShoppingCart,
   Users,
@@ -95,10 +94,12 @@ export default function DashboardLayout() {
             <Menu className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <UtensilsCrossed className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold">Dapoer-Attauhid</span>
+            <img
+              src="/logo.png"
+              alt="Dapoer-Attauhid"
+              className="w-8 h-8 object-contain"
+            />
+            <span className="font-bold">Dapoer Attauhid</span>
           </div>
         </div>
         <Link to="/dashboard/cart" className="relative">
@@ -133,10 +134,12 @@ export default function DashboardLayout() {
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-primary">
-                <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">Dapoer-Attauhid</span>
+              <img
+                src="/logo.png"
+                alt="Dapoer-Attauhid"
+                className="w-10 h-10 object-contain"
+              />
+              <span className="font-bold text-lg">Dapoer Attauhid</span>
             </div>
             <Button
               variant="ghost"

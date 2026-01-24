@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
-  UtensilsCrossed,
   ArrowRight,
   CheckCircle,
   Smartphone,
@@ -40,10 +39,12 @@ export default function Index() {
       {/* Header */}
       <header className="container mx-auto px-4 py-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-primary">
-            <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold">Dapoer-Attauhid</span>
+          <img
+            src="/logo.png"
+            alt="Dapoer-Attauhid"
+            className="w-10 h-10 object-contain"
+          />
+          <span className="text-xl font-bold">Dapoer Attauhid</span>
         </div>
         <div className="flex items-center gap-3">
           <Link to="/track">
@@ -143,7 +144,7 @@ export default function Index() {
 
       {/* Footer */}
       <footer className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-        <p>&copy; 2024 Dapoer-Attauhid. Semua hak dilindungi.</p>
+        <p>&copy; 2024 Dapoer Attauhid. Semua hak dilindungi.</p>
       </footer>
     </div>
   );

@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { UtensilsCrossed, Mail, Lock, ArrowRight } from "lucide-react";
+import { Mail, Lock, ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -92,11 +92,13 @@ export default function Login() {
       <div className="w-full max-w-md animate-slide-up">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-primary mb-4">
-            <UtensilsCrossed className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Dapoer-Attauhid"
+            className="w-16 h-16 mx-auto mb-4"
+          />
           <h1 className="text-3xl font-bold text-foreground">
-            Dapoer-Attauhid
+            Dapoer Attauhid
           </h1>
           <p className="text-muted-foreground mt-2">
             Pesan makanan untuk anak Anda dengan mudah

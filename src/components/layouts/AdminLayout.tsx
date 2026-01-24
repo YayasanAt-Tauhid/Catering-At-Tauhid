@@ -8,7 +8,6 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  UtensilsCrossed,
   LayoutDashboard,
   ChefHat,
   ShoppingBag,
@@ -90,9 +89,11 @@ export default function AdminLayout() {
             <Menu className="w-6 h-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center">
-              <UtensilsCrossed className="w-4 h-4 text-secondary-foreground" />
-            </div>
+            <img
+              src="/logo.png"
+              alt="Dapoer-Attauhid"
+              className="w-8 h-8 object-contain"
+            />
             <span className="font-bold">Admin Panel</span>
           </div>
         </div>
@@ -118,9 +119,11 @@ export default function AdminLayout() {
           {/* Logo */}
           <div className="h-16 flex items-center justify-between px-6 border-b border-border">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                <UtensilsCrossed className="w-5 h-5 text-secondary-foreground" />
-              </div>
+              <img
+                src="/logo.png"
+                alt="Dapoer-Attauhid"
+                className="w-10 h-10 object-contain"
+              />
               <div>
                 <span className="font-bold text-lg">Admin Panel</span>
                 <p className="text-xs text-muted-foreground">Dapoer-Attauhid</p>

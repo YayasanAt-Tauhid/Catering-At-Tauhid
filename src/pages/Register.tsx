@@ -13,15 +13,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import {
-  UtensilsCrossed,
-  Mail,
-  Lock,
-  User,
-  Phone,
-  ArrowRight,
-  Check,
-} from "lucide-react";
+import { Mail, Lock, User, Phone, ArrowRight, Check } from "lucide-react";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -106,13 +98,15 @@ export default function Register() {
       <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-8 animate-slide-up">
         {/* Left side - Benefits */}
         <div className="hidden lg:flex flex-col justify-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-primary shadow-primary mb-6">
-            <UtensilsCrossed className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="Dapoer-Attauhid"
+            className="w-16 h-16 mb-6"
+          />
           <h1 className="text-4xl font-bold text-foreground mb-4">
             Bergabung dengan
             <br />
-            <span className="text-primary">Dapoer-Attauhid</span>
+            <span className="text-primary">Dapoer Attauhid</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-8">
             Platform pemesanan makanan sekolah terpercaya untuk memastikan anak
@@ -134,10 +128,12 @@ export default function Register() {
         <Card variant="elevated">
           <CardHeader className="space-y-1">
             <div className="lg:hidden flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-                <UtensilsCrossed className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold">Dapoer-Attauhid</span>
+              <img
+                src="/logo.png"
+                alt="Dapoer-Attauhid"
+                className="w-10 h-10 object-contain"
+              />
+              <span className="text-xl font-bold">Dapoer Attauhid</span>
             </div>
             <CardTitle className="text-2xl">Buat Akun Baru</CardTitle>
             <CardDescription>
