@@ -1,4 +1,4 @@
-// Version 6 - Auto QRIS/VA selection with admin fee calculation
+// Version 6.1 - Auto QRIS/VA selection with admin fee + Reuse existing snap_token
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -50,7 +50,7 @@ function calculateAdminFee(baseAmount: number): {
 function getEnabledPayments(baseAmount: number): string[] {
   if (baseAmount <= PAYMENT_CONFIG.QRIS_MAX_AMOUNT) {
     // Only QRIS for amounts <= 628k
-    return ["qris"];
+    return ["other_qris"];
   } else {
     // Only bank transfer/VA for amounts > 628k
     return ["bank_transfer"];
@@ -58,7 +58,7 @@ function getEnabledPayments(baseAmount: number): string[] {
 }
 
 serve(async (req) => {
-  console.log("[V6] Create payment function called");
+  console.log("[V6.1] Create payment function called");
 
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -66,29 +66,32 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    console.log("[V6] Received body:", JSON.stringify(body));
+    console.log("[V6.1] Received body:", JSON.stringify(body));
 
     // Support both single orderId and multiple orderIds
     let orderIds: string[] = [];
     const isGuestCheckout = body.isGuest === true;
+    const forceNewToken = body.forceNewToken === true; // Option to force create new token
 
     if (body.orderIds && Array.isArray(body.orderIds)) {
       orderIds = body.orderIds;
-      console.log("[V6] Using orderIds array:", orderIds);
+      console.log("[V6.1] Using orderIds array:", orderIds);
     } else if (body.orderId) {
       orderIds = [body.orderId];
-      console.log("[V6] Using single orderId:", body.orderId);
+      console.log("[V6.1] Using single orderId:", body.orderId);
     }
 
     console.log(
-      "[V6] Final orderIds to process:",
+      "[V6.1] Final orderIds to process:",
       orderIds,
       "isGuest:",
       isGuestCheckout,
+      "forceNewToken:",
+      forceNewToken,
     );
 
     if (orderIds.length === 0) {
-      console.log("[V6] No order IDs provided");
+      console.log("[V6.1] No order IDs provided");
       throw new Error("Order ID is required");
     }
 
@@ -97,13 +100,13 @@ serve(async (req) => {
     let supabaseClient;
 
     if (isGuestCheckout) {
-      console.log("[V6] Guest checkout - using service role");
+      console.log("[V6.1] Guest checkout - using service role");
       supabaseClient = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
       );
     } else {
-      console.log("[V6] Authenticated checkout - using user token");
+      console.log("[V6.1] Authenticated checkout - using user token");
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         throw new Error(
@@ -122,7 +125,7 @@ serve(async (req) => {
     }
 
     // Fetch all orders
-    console.log("[V6] Fetching orders from database...");
+    console.log("[V6.1] Fetching orders from database...");
     const { data: orders, error: orderError } = await supabaseClient
       .from("orders")
       .select(
@@ -142,7 +145,7 @@ serve(async (req) => {
       .in("id", orderIds);
 
     console.log(
-      "[V6] Fetched orders count:",
+      "[V6.1] Fetched orders count:",
       orders?.length,
       "Error:",
       orderError?.message,
@@ -163,7 +166,7 @@ serve(async (req) => {
 
         if (deliveryDate < today) {
           console.log(
-            "[V6] Rejected - delivery date expired:",
+            "[V6.1] Rejected - delivery date expired:",
             order.delivery_date,
           );
           throw new Error(
@@ -175,18 +178,132 @@ serve(async (req) => {
 
     // Validate guest orders
     if (isGuestCheckout) {
-      const hasNonGuestOrder = orders.some((order) => order.user_id !== null);
+      const hasNonGuestOrder = orders.some(
+        (order: any) => order.user_id !== null,
+      );
       if (hasNonGuestOrder) {
         throw new Error("Guest checkout can only be used for guest orders");
       }
     }
 
+    // Check if order is already paid
+    const hasPaidOrder = orders.some(
+      (order: any) => order.status === "paid" || order.status === "confirmed",
+    );
+    if (hasPaidOrder) {
+      throw new Error("Pesanan sudah dibayar");
+    }
+
+    // ============================================
+    // CHECK FOR EXISTING SNAP TOKEN (REUSE LOGIC)
+    // ============================================
+
+    // For single order, check if it already has a valid snap_token
+    if (orderIds.length === 1 && !forceNewToken) {
+      const existingOrder = orders[0];
+
+      if (existingOrder.snap_token && existingOrder.status === "pending") {
+        console.log("[V6.1] Found existing snap_token, reusing it");
+
+        // Calculate payment info for response
+        const baseAmount = existingOrder.total_amount;
+        const adminFee =
+          existingOrder.admin_fee || calculateAdminFee(baseAmount).fee;
+        const totalAmount = baseAmount + adminFee;
+        const paymentMethod =
+          existingOrder.payment_method || calculateAdminFee(baseAmount).method;
+        const feeType =
+          paymentMethod === "qris"
+            ? `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`
+            : `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            snapToken: existingOrder.snap_token,
+            redirectUrl: existingOrder.payment_url,
+            orderIds: orderIds,
+            reused: true,
+            paymentInfo: {
+              baseAmount,
+              adminFee,
+              totalAmount,
+              paymentMethod,
+              feeType,
+            },
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          },
+        );
+      }
+    }
+
+    // For multiple orders, check if they all have the same transaction_id and snap_token
+    if (orderIds.length > 1 && !forceNewToken) {
+      const firstToken = orders[0].snap_token;
+      const firstTransactionId = orders[0].transaction_id;
+
+      const allHaveSameToken = orders.every(
+        (order: any) =>
+          order.snap_token === firstToken &&
+          order.transaction_id === firstTransactionId &&
+          order.status === "pending" &&
+          firstToken !== null,
+      );
+
+      if (allHaveSameToken && firstToken) {
+        console.log("[V6.1] All orders have same snap_token, reusing it");
+
+        const baseAmount = orders.reduce(
+          (sum: number, order: any) => sum + order.total_amount,
+          0,
+        );
+        const adminFee =
+          orders[0].admin_fee || calculateAdminFee(baseAmount).fee;
+        const totalAmount = baseAmount + adminFee;
+        const paymentMethod =
+          orders[0].payment_method || calculateAdminFee(baseAmount).method;
+        const feeType =
+          paymentMethod === "qris"
+            ? `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`
+            : `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`;
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            snapToken: firstToken,
+            redirectUrl: orders[0].payment_url,
+            orderIds: orderIds,
+            reused: true,
+            paymentInfo: {
+              baseAmount,
+              adminFee,
+              totalAmount,
+              paymentMethod,
+              feeType,
+            },
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          },
+        );
+      }
+    }
+
+    // ============================================
+    // CREATE NEW SNAP TOKEN
+    // ============================================
+    console.log("[V6.1] Creating new snap token...");
+
     // Calculate combined total (base amount without admin fee)
     const baseAmount = orders.reduce(
-      (sum, order) => sum + order.total_amount,
+      (sum: number, order: any) => sum + order.total_amount,
       0,
     );
-    console.log("[V6] Base amount (before admin fee):", baseAmount);
+    console.log("[V6.1] Base amount (before admin fee):", baseAmount);
 
     // Calculate admin fee based on amount
     const {
@@ -197,18 +314,18 @@ serve(async (req) => {
     const totalAmount = baseAmount + adminFee;
 
     console.log(
-      "[V6] Admin fee:",
+      "[V6.1] Admin fee:",
       adminFee,
       "| Payment method:",
       paymentMethod,
       "| Fee type:",
       feeType,
     );
-    console.log("[V6] Total amount (with admin fee):", totalAmount);
+    console.log("[V6.1] Total amount (with admin fee):", totalAmount);
 
     // Get enabled payment methods
     const enabledPayments = getEnabledPayments(baseAmount);
-    console.log("[V6] Enabled payments:", enabledPayments);
+    console.log("[V6.1] Enabled payments:", enabledPayments);
 
     // Create combined order ID for Midtrans
     const combinedOrderId =
@@ -216,15 +333,15 @@ serve(async (req) => {
         ? `BULK-${Date.now()}-${orderIds.length}`
         : orders[0].id;
 
-    console.log("[V6] Combined order ID:", combinedOrderId);
+    console.log("[V6.1] Combined order ID:", combinedOrderId);
 
     // Combine all items from all orders
     const allItems: any[] = [];
-    orders.forEach((order) => {
+    orders.forEach((order: any) => {
       if (order.order_items) {
         order.order_items.forEach((item: any) => {
           allItems.push({
-            id: item.menu_item_id,
+            id: item.menu_item_id || `item-${item.id}`,
             price: Math.round(item.unit_price),
             quantity: item.quantity,
             name: item.menu_item?.name || "Menu Item",
@@ -241,7 +358,7 @@ serve(async (req) => {
       name: `Biaya Admin (${feeType})`,
     });
 
-    console.log("[V6] Total items (including admin fee):", allItems.length);
+    console.log("[V6.1] Total items (including admin fee):", allItems.length);
 
     // Get customer details - support both guest and authenticated orders
     const firstOrder = orders[0];
@@ -263,7 +380,7 @@ serve(async (req) => {
     const customerDetails = {
       first_name: customerName,
       phone: customerPhone,
-      email: "customer@kideats.com",
+      email: "customer@dapoer-attauhid.com",
     };
 
     // Build Midtrans payload with restricted payment methods
@@ -277,21 +394,11 @@ serve(async (req) => {
     // Add specific configurations based on payment method
     if (paymentMethod === "qris") {
       midtransPayload.qris = {
-        acquirer: "gopay", // Default QRIS acquirer
+        acquirer: "gopay",
       };
-    } else if (paymentMethod === "bank_transfer") {
-      // Enable multiple VA options
-      midtransPayload.enabled_payments = [
-        "bca_va",
-        "bni_va",
-        "bri_va",
-        "permata_va",
-        "cimb_va",
-        "other_va",
-      ];
     }
 
-    console.log("[V6] Midtrans payload:", JSON.stringify(midtransPayload));
+    console.log("[V6.1] Midtrans payload:", JSON.stringify(midtransPayload));
 
     const midtransServerKey = Deno.env.get("MIDTRANS_SERVER_KEY");
     if (!midtransServerKey) {
@@ -304,7 +411,7 @@ serve(async (req) => {
       : "https://app.sandbox.midtrans.com/snap/v1/transactions";
 
     console.log(
-      "[V6] Calling Midtrans API:",
+      "[V6.1] Calling Midtrans API:",
       midtransUrl,
       "| Production:",
       isProduction,
@@ -323,12 +430,12 @@ serve(async (req) => {
 
     if (!midtransResponse.ok) {
       const errorText = await midtransResponse.text();
-      console.error("[V6] Midtrans error:", errorText);
+      console.error("[V6.1] Midtrans error:", errorText);
       throw new Error(`Midtrans API error: ${errorText}`);
     }
 
     const midtransData = await midtransResponse.json();
-    console.log("[V6] Midtrans success, token:", midtransData.token);
+    console.log("[V6.1] Midtrans success, token:", midtransData.token);
 
     // Update all orders with snap token, admin fee info, and combined transaction ID
     const { error: updateError } = await supabaseClient
@@ -343,13 +450,12 @@ serve(async (req) => {
       .in("id", orderIds);
 
     if (updateError) {
-      console.error("[V6] Update error:", updateError);
-      // Don't throw - payment was created successfully, just failed to update order
+      console.error("[V6.1] Update error:", updateError);
       console.log(
-        "[V6] Warning: Failed to update orders with payment data, but payment token created",
+        "[V6.1] Warning: Failed to update orders with payment data, but payment token created",
       );
     } else {
-      console.log("[V6] Successfully updated", orderIds.length, "orders");
+      console.log("[V6.1] Successfully updated", orderIds.length, "orders");
     }
 
     return new Response(
@@ -358,6 +464,7 @@ serve(async (req) => {
         snapToken: midtransData.token,
         redirectUrl: midtransData.redirect_url,
         orderIds: orderIds,
+        reused: false,
         paymentInfo: {
           baseAmount,
           adminFee,
@@ -374,7 +481,7 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    console.error("[V6] Error:", errorMessage);
+    console.error("[V6.1] Error:", errorMessage);
     return new Response(
       JSON.stringify({
         success: false,
