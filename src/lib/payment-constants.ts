@@ -2,7 +2,7 @@
 // Based on Midtrans payment method requirements
 
 // QRIS maximum transaction amount (in IDR)
-// Transactions below this use QRIS, above use Bank Transfer
+// Transactions at or below this use QRIS, above use Bank Transfer
 export const QRIS_MAX_AMOUNT = 628000;
 
 // Payment method configurations
@@ -99,8 +99,7 @@ export const calculateAdminFee = (
 ): number => {
   // If payment type is specified, calculate based on that
   if (paymentType) {
-    const method =
-      PAYMENT_METHODS[paymentType as keyof typeof PAYMENT_METHODS];
+    const method = PAYMENT_METHODS[paymentType as keyof typeof PAYMENT_METHODS];
     if (method) {
       if (method.feeType === "percentage") {
         return Math.ceil((baseAmount * method.feePercentage) / 100);
@@ -109,8 +108,8 @@ export const calculateAdminFee = (
     }
   }
 
-  // Default: QRIS for < 628k, VA for >= 628k
-  if (baseAmount < QRIS_MAX_AMOUNT) {
+  // Default: QRIS for <= 628k, VA for > 628k
+  if (baseAmount <= QRIS_MAX_AMOUNT) {
     // QRIS 0.7%
     return Math.ceil((baseAmount * PAYMENT_METHODS.qris.feePercentage) / 100);
   } else {
@@ -127,17 +126,17 @@ export const getEnabledPaymentMethods = (
   recommended: string;
   feeEstimate: number;
 } => {
-  if (amount < QRIS_MAX_AMOUNT) {
-    // For amounts under 628k, use QRIS and e-wallets only
+  if (amount <= QRIS_MAX_AMOUNT) {
+    // For amounts at or under 628k, use QRIS only
     return {
-      enabled_payments: ["qris", "gopay", "shopeepay"],
+      enabled_payments: ["qris"],
       recommended: "qris",
       feeEstimate: Math.ceil(
         (amount * PAYMENT_METHODS.qris.feePercentage) / 100,
       ),
     };
   } else {
-    // For amounts 628k and above, use bank transfer only
+    // For amounts above 628k, use bank transfer only
     return {
       enabled_payments: [
         "bank_transfer",
@@ -155,7 +154,7 @@ export const getEnabledPaymentMethods = (
 
 // Get payment method label for display
 export const getPaymentMethodLabel = (amount: number): string => {
-  if (amount < QRIS_MAX_AMOUNT) {
+  if (amount <= QRIS_MAX_AMOUNT) {
     return "QRIS (0.7%)";
   }
   return "Virtual Account (Rp 4.400)";
@@ -165,7 +164,5 @@ export const getPaymentMethodLabel = (amount: number): string => {
 export const getPaymentMethodInfo = (
   paymentType: string,
 ): (typeof PAYMENT_METHODS)[keyof typeof PAYMENT_METHODS] | null => {
-  return (
-    PAYMENT_METHODS[paymentType as keyof typeof PAYMENT_METHODS] || null
-  );
+  return PAYMENT_METHODS[paymentType as keyof typeof PAYMENT_METHODS] || null;
 };
