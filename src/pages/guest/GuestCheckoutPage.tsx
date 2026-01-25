@@ -5,6 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  CascadingClassSelect,
+  getFullClassString,
+  type Jenjang,
+} from "@/components/CascadingClassSelect";
 import { useNavigate, Link } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -51,7 +56,8 @@ export default function GuestCheckoutPage() {
 
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [guestClass, setGuestClass] = useState("");
+  const [guestJenjang, setGuestJenjang] = useState<Jenjang | "">("");
+  const [guestKelas, setGuestKelas] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -111,10 +117,20 @@ export default function GuestCheckoutPage() {
       return;
     }
 
-    if (!guestClass.trim()) {
+    if (!guestJenjang) {
+      toast({
+        title: "Jenjang Wajib Diisi",
+        description: "Silakan pilih jenjang pendidikan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // PTK doesn't require class selection
+    if (guestJenjang !== "PTK" && !guestKelas.trim()) {
       toast({
         title: "Kelas Wajib Diisi",
-        description: "Silakan masukkan alamat kelas",
+        description: "Silakan pilih kelas",
         variant: "destructive",
       });
       return;
@@ -138,6 +154,7 @@ export default function GuestCheckoutPage() {
       );
 
       // Create guest order (user_id = null)
+      const fullClassString = getFullClassString(guestJenjang, guestKelas);
       const { data: newOrder, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -145,7 +162,7 @@ export default function GuestCheckoutPage() {
           recipient_id: null,
           guest_name: guestName.trim(),
           guest_phone: guestPhone.trim(),
-          guest_class: guestClass.trim(),
+          guest_class: fullClassString,
           delivery_date: format(deliveryDate, "yyyy-MM-dd"),
           total_amount: totalAmount,
           status: "pending",
@@ -282,17 +299,12 @@ export default function GuestCheckoutPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="class">Alamat Kelas *</Label>
-                  <div className="relative">
-                    <School className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="class"
-                      placeholder="Contoh: Kelas 3A"
-                      value={guestClass}
-                      onChange={(e) => setGuestClass(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+                  <CascadingClassSelect
+                    jenjang={guestJenjang}
+                    kelas={guestKelas}
+                    onJenjangChange={setGuestJenjang}
+                    onKelasChange={setGuestKelas}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -386,10 +398,12 @@ export default function GuestCheckoutPage() {
                       <span className="font-medium">{guestName}</span>
                     </div>
                   )}
-                  {guestClass && (
+                  {guestJenjang && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Kelas</span>
-                      <span className="font-medium">{guestClass}</span>
+                      <span className="font-medium">
+                        {getFullClassString(guestJenjang, guestKelas)}
+                      </span>
                     </div>
                   )}
                   {deliveryDate && (
@@ -446,7 +460,8 @@ export default function GuestCheckoutPage() {
                   disabled={
                     !guestName ||
                     !guestPhone ||
-                    !guestClass ||
+                    !guestJenjang ||
+                    (guestJenjang !== "PTK" && !guestKelas) ||
                     !deliveryDate ||
                     isProcessing
                   }
