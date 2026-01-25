@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react';
-import { useApp } from '@/context/AppContext';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useEffect } from "react";
+import { useApp } from "@/context/AppContext";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,16 +24,43 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Users, Plus, Edit, Trash2, GraduationCap, User, Loader2 } from 'lucide-react';
-import { Recipient } from '@/hooks/useRecipients';
+} from "@/components/ui/alert-dialog";
+import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  GraduationCap,
+  User,
+  Loader2,
+} from "lucide-react";
+import { Recipient } from "@/hooks/useRecipients";
+import {
+  CascadingClassSelect,
+  Jenjang,
+  getFullClassString,
+  parseClassString,
+} from "@/components/CascadingClassSelect";
 
 export default function RecipientsPage() {
-  const { recipients, recipientsLoading, addRecipient, updateRecipient, deleteRecipient, getOrderCount } = useApp();
+  const {
+    recipients,
+    recipientsLoading,
+    addRecipient,
+    updateRecipient,
+    deleteRecipient,
+    getOrderCount,
+  } = useApp();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(null);
-  const [formData, setFormData] = useState({ name: '', class: '' });
+  const [editingRecipient, setEditingRecipient] = useState<Recipient | null>(
+    null,
+  );
+  const [formData, setFormData] = useState({
+    name: "",
+    jenjang: "" as Jenjang | "",
+    kelas: "",
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderCounts, setOrderCounts] = useState<Record<string, number>>({});
 
@@ -53,46 +79,51 @@ export default function RecipientsPage() {
   }, [recipients, getOrderCount]);
 
   const handleAdd = async () => {
-    if (!formData.name || !formData.class) {
+    const fullClass = getFullClassString(formData.jenjang, formData.kelas);
+    if (!formData.name || !fullClass) {
       toast({
-        title: 'Error',
-        description: 'Semua field harus diisi',
-        variant: 'destructive',
+        title: "Error",
+        description: "Semua field harus diisi",
+        variant: "destructive",
       });
       return;
     }
 
     setIsSubmitting(true);
-    const result = await addRecipient({ name: formData.name, class: formData.class });
+    const result = await addRecipient({
+      name: formData.name,
+      class: fullClass,
+    });
     setIsSubmitting(false);
 
     if (result) {
       toast({
-        title: 'Berhasil',
-        description: 'Penerima baru berhasil ditambahkan',
+        title: "Berhasil",
+        description: "Penerima baru berhasil ditambahkan",
       });
-      setFormData({ name: '', class: '' });
+      setFormData({ name: "", jenjang: "", kelas: "" });
       setIsAddDialogOpen(false);
     }
   };
 
   const handleUpdate = async () => {
-    if (!editingRecipient || !formData.name || !formData.class) return;
+    const fullClass = getFullClassString(formData.jenjang, formData.kelas);
+    if (!editingRecipient || !formData.name || !fullClass) return;
 
     setIsSubmitting(true);
     const success = await updateRecipient(editingRecipient.id, {
       name: formData.name,
-      class: formData.class,
+      class: fullClass,
     });
     setIsSubmitting(false);
 
     if (success) {
       toast({
-        title: 'Berhasil',
-        description: 'Data penerima berhasil diperbarui',
+        title: "Berhasil",
+        description: "Data penerima berhasil diperbarui",
       });
       setEditingRecipient(null);
-      setFormData({ name: '', class: '' });
+      setFormData({ name: "", jenjang: "", kelas: "" });
     }
   };
 
@@ -100,21 +131,31 @@ export default function RecipientsPage() {
     const result = await deleteRecipient(id);
     if (result.success) {
       toast({
-        title: 'Berhasil',
-        description: 'Penerima berhasil dihapus',
+        title: "Berhasil",
+        description: "Penerima berhasil dihapus",
       });
-    } else if (result.reason === 'has_orders') {
+    } else if (result.reason === "has_orders") {
       toast({
-        title: 'Gagal',
-        description: 'Penerima tidak bisa dihapus karena memiliki riwayat pesanan',
-        variant: 'destructive',
+        title: "Gagal",
+        description:
+          "Penerima tidak bisa dihapus karena memiliki riwayat pesanan",
+        variant: "destructive",
       });
     }
   };
 
   const openEditDialog = (recipient: Recipient) => {
     setEditingRecipient(recipient);
-    setFormData({ name: recipient.name, class: recipient.class || '' });
+    const parsed = parseClassString(recipient.class || "");
+    setFormData({
+      name: recipient.name,
+      jenjang: parsed.jenjang,
+      kelas: parsed.kelas,
+    });
+  };
+
+  const resetFormData = () => {
+    setFormData({ name: "", jenjang: "", kelas: "" });
   };
 
   if (recipientsLoading) {
@@ -146,7 +187,9 @@ export default function RecipientsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold">Kelola Penerima</h1>
-          <p className="text-muted-foreground mt-1">Kelola data anak penerima makanan</p>
+          <p className="text-muted-foreground mt-1">
+            Kelola data anak penerima makanan
+          </p>
         </div>
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogTrigger asChild>
@@ -164,30 +207,40 @@ export default function RecipientsPage() {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="add-name">Nama Anak</Label>
+                <label htmlFor="add-name" className="text-sm font-medium">
+                  Nama Anak
+                </label>
                 <Input
                   id="add-name"
                   placeholder="Contoh: Ahmad Rizki"
                   value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="add-class">Kelas / Lokasi</Label>
-                <Input
-                  id="add-class"
-                  placeholder="Contoh: Kelas 3A"
-                  value={formData.class}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, class: e.target.value }))}
-                />
-              </div>
+              <CascadingClassSelect
+                jenjang={formData.jenjang}
+                kelas={formData.kelas}
+                onJenjangChange={(value) =>
+                  setFormData((prev) => ({ ...prev, jenjang: value }))
+                }
+                onKelasChange={(value) =>
+                  setFormData((prev) => ({ ...prev, kelas: value }))
+                }
+              />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddDialogOpen(false)}
+              >
                 Batal
               </Button>
               <Button onClick={handleAdd} disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isSubmitting && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
                 Tambah
               </Button>
             </DialogFooter>
@@ -208,12 +261,18 @@ export default function RecipientsPage() {
                       <User className="w-7 h-7 text-primary-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg truncate">{recipient.name}</h3>
+                      <h3 className="font-bold text-lg truncate">
+                        {recipient.name}
+                      </h3>
                       <div className="flex items-center gap-1 text-muted-foreground mt-1">
                         <GraduationCap className="w-4 h-4" />
-                        <span className="text-sm">{recipient.class || '-'}</span>
+                        <span className="text-sm">
+                          {recipient.class || "-"}
+                        </span>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-2">{orderCount} pesanan</p>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {orderCount} pesanan
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2 mt-4 pt-4 border-t border-border">
@@ -237,36 +296,57 @@ export default function RecipientsPage() {
                       <DialogContent>
                         <DialogHeader>
                           <DialogTitle>Edit Penerima</DialogTitle>
-                          <DialogDescription>Perbarui data penerima</DialogDescription>
+                          <DialogDescription>
+                            Perbarui data penerima
+                          </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="edit-name">Nama Anak</Label>
+                            <label
+                              htmlFor="edit-name"
+                              className="text-sm font-medium"
+                            >
+                              Nama Anak
+                            </label>
                             <Input
                               id="edit-name"
                               value={formData.name}
                               onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, name: e.target.value }))
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  name: e.target.value,
+                                }))
                               }
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-class">Kelas / Lokasi</Label>
-                            <Input
-                              id="edit-class"
-                              value={formData.class}
-                              onChange={(e) =>
-                                setFormData((prev) => ({ ...prev, class: e.target.value }))
-                              }
-                            />
-                          </div>
+                          <CascadingClassSelect
+                            jenjang={formData.jenjang}
+                            kelas={formData.kelas}
+                            onJenjangChange={(value) =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                jenjang: value,
+                              }))
+                            }
+                            onKelasChange={(value) =>
+                              setFormData((prev) => ({ ...prev, kelas: value }))
+                            }
+                          />
                         </div>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setEditingRecipient(null)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setEditingRecipient(null)}
+                          >
                             Batal
                           </Button>
-                          <Button onClick={handleUpdate} disabled={isSubmitting}>
-                            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          <Button
+                            onClick={handleUpdate}
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting && (
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            )}
                             Simpan
                           </Button>
                         </DialogFooter>
@@ -289,8 +369,8 @@ export default function RecipientsPage() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>Hapus Penerima?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Tindakan ini tidak dapat dibatalkan. Data penerima "{recipient.name}"
-                            akan dihapus permanen.
+                            Tindakan ini tidak dapat dibatalkan. Data penerima "
+                            {recipient.name}" akan dihapus permanen.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
