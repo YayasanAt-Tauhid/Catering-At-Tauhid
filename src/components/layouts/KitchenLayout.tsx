@@ -2,12 +2,13 @@ import { Navigate, Outlet, NavLink } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  ChefHat, 
+import {
+  ChefHat,
   ClipboardList,
   LogOut,
   Menu,
-  Printer
+  Printer,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -21,14 +22,14 @@ export default function KitchenLayout() {
   useEffect(() => {
     async function checkRole() {
       if (!user) return;
-      
-      const { data } = await supabase.rpc('has_role', { 
-        _user_id: user.id, 
-        _role: 'kitchen' 
+
+      const { data } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "kitchen",
       });
       setHasKitchenRole(data ?? false);
     }
-    
+
     checkRole();
   }, [user]);
 
@@ -50,6 +51,7 @@ export default function KitchenLayout() {
 
   const navItems = [
     { to: "/kitchen", icon: ClipboardList, label: "Rekap Harian" },
+    { to: "/kitchen/recipients", icon: Users, label: "Daftar Penerima" },
     { to: "/kitchen/print", icon: Printer, label: "Cetak Tiket" },
   ];
 
@@ -61,18 +63,21 @@ export default function KitchenLayout() {
           <span className="font-bold text-xl">Dapur</span>
         </div>
       </div>
-      
+
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => (
-          <NavLink 
-            key={item.to} 
+          <NavLink
+            key={item.to}
             to={item.to}
             end
             onClick={() => setIsOpen(false)}
-            className={({ isActive }) => cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
-              isActive && "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
-            )}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+                isActive &&
+                  "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground",
+              )
+            }
           >
             <item.icon className="h-4 w-4" />
             {item.label}
@@ -81,8 +86,8 @@ export default function KitchenLayout() {
       </nav>
 
       <div className="p-4 border-t border-border">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
           onClick={signOut}
         >
