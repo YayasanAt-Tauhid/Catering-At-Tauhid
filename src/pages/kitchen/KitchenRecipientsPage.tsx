@@ -49,9 +49,32 @@ interface RecipientInfo {
 
 type StatusFilter = "all" | "paid" | "pending";
 type SortOption = "name" | "class" | "status";
+type JenjangFilter = "all" | "SD" | "SMP" | "SMA" | "MTA" | "PTK";
+
+// Helper to extract jenjang from class string
+const extractJenjang = (classStr: string): string => {
+  if (!classStr || classStr === "-") return "-";
+  const upperClass = classStr.toUpperCase();
+
+  // Check for explicit jenjang prefix (e.g., "SD - 1A", "SMP - 7A")
+  if (upperClass.includes("SD")) return "SD";
+  if (upperClass.includes("SMP")) return "SMP";
+  if (upperClass.includes("SMA")) return "SMA";
+  if (upperClass.includes("MTA")) return "MTA";
+  if (upperClass.includes("PTK")) return "PTK";
+
+  // Infer from class number
+  const classNum = parseInt(classStr.replace(/[^0-9]/g, ""));
+  if (classNum >= 1 && classNum <= 6) return "SD";
+  if (classNum >= 7 && classNum <= 9) return "SMP";
+  if (classNum >= 10 && classNum <= 12) return "SMA";
+
+  return "-";
+};
 
 export default function KitchenRecipientsPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedJenjang, setSelectedJenjang] = useState<JenjangFilter>("all");
   const [selectedClass, setSelectedClass] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("class");
@@ -151,6 +174,13 @@ export default function KitchenRecipientsPage() {
   const filteredAndSortedRecipients = useMemo(() => {
     let recipients = data?.recipients ?? [];
 
+    // Apply jenjang filter
+    if (selectedJenjang !== "all") {
+      recipients = recipients.filter(
+        (r) => extractJenjang(r.class) === selectedJenjang,
+      );
+    }
+
     // Apply class filter
     if (selectedClass !== "all") {
       recipients = recipients.filter((r) => r.class === selectedClass);
@@ -190,7 +220,7 @@ export default function KitchenRecipientsPage() {
           return 0;
       }
     });
-  }, [data?.recipients, selectedClass, statusFilter, sortBy]);
+  }, [data?.recipients, selectedJenjang, selectedClass, statusFilter, sortBy]);
 
   const handleSelectAll = () => {
     if (selectedRecipients.size === filteredAndSortedRecipients.length) {
@@ -266,15 +296,22 @@ export default function KitchenRecipientsPage() {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: 10px;
+      table-layout: fixed;
     }
     th, td {
       border: 1px solid #ddd;
       padding: 8px;
       text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     th {
       background: #f9fafb;
     }
+    .col-no { width: 5%; text-align: center; }
+    .col-nama { width: 35%; }
+    .col-menu { width: 45%; }
+    .col-status { width: 15%; text-align: center; }
     .status-paid {
       color: #16a34a;
       font-weight: bold;
@@ -323,10 +360,10 @@ export default function KitchenRecipientsPage() {
       <table>
         <thead>
           <tr>
-            <th style="width: 30px">No</th>
-            <th>Nama</th>
-            <th>Menu</th>
-            <th style="width: 70px">Status</th>
+            <th class="col-no">No</th>
+            <th class="col-nama">Nama</th>
+            <th class="col-menu">Menu</th>
+            <th class="col-status">Status</th>
           </tr>
         </thead>
         <tbody>
@@ -334,10 +371,10 @@ export default function KitchenRecipientsPage() {
             .map(
               (r, idx) => `
             <tr>
-              <td>${idx + 1}</td>
-              <td>${r.name}${r.isGuest ? '<span class="guest-badge">Tamu</span>' : ""}</td>
-              <td>${r.items.map((i) => `${i.name} (${i.quantity})`).join(", ")}</td>
-              <td class="${r.status === "paid" || r.status === "confirmed" ? "status-paid" : "status-pending"}">
+              <td class="col-no">${idx + 1}</td>
+              <td class="col-nama">${r.name}${r.isGuest ? '<span class="guest-badge">Tamu</span>' : ""}</td>
+              <td class="col-menu">${r.items.map((i) => `${i.name} (${i.quantity})`).join(", ")}</td>
+              <td class="col-status ${r.status === "paid" || r.status === "confirmed" ? "status-paid" : "status-pending"}">
                 ${r.status === "paid" || r.status === "confirmed" ? "Lunas" : "Pending"}
               </td>
             </tr>
@@ -412,6 +449,23 @@ export default function KitchenRecipientsPage() {
             <Filter className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium">Filter:</span>
           </div>
+
+          <Select
+            value={selectedJenjang}
+            onValueChange={(v) => setSelectedJenjang(v as JenjangFilter)}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="Jenjang" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Jenjang</SelectItem>
+              <SelectItem value="SD">SD</SelectItem>
+              <SelectItem value="SMP">SMP</SelectItem>
+              <SelectItem value="SMA">SMA</SelectItem>
+              <SelectItem value="MTA">MTA</SelectItem>
+              <SelectItem value="PTK">PTK</SelectItem>
+            </SelectContent>
+          </Select>
 
           <Select value={selectedClass} onValueChange={setSelectedClass}>
             <SelectTrigger className="w-[130px]">
@@ -582,20 +636,20 @@ export default function KitchenRecipientsPage() {
               <p>Tidak ada penerima untuk kriteria ini</p>
             </div>
           ) : (
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50px]"></TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Kelas</TableHead>
-                  <TableHead>Menu</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                  <TableHead className="w-[180px]">Nama</TableHead>
+                  <TableHead className="w-[100px]">Kelas</TableHead>
+                  <TableHead className="w-auto">Menu</TableHead>
+                  <TableHead className="w-[90px] text-right">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAndSortedRecipients.map((recipient) => (
                   <TableRow key={recipient.orderId}>
-                    <TableCell>
+                    <TableCell className="w-12">
                       <Checkbox
                         checked={selectedRecipients.has(recipient.orderId)}
                         onCheckedChange={() =>
@@ -603,27 +657,34 @@ export default function KitchenRecipientsPage() {
                         }
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{recipient.name}</span>
+                    <TableCell className="w-[180px]">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="font-medium truncate">
+                          {recipient.name}
+                        </span>
                         {recipient.isGuest && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-xs flex-shrink-0"
+                          >
                             Tamu
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{recipient.class}</Badge>
+                    <TableCell className="w-[100px]">
+                      <Badge variant="secondary" className="text-xs">
+                        {recipient.class}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[200px]">
-                      <span className="text-sm text-muted-foreground truncate block">
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground line-clamp-2">
                         {recipient.items
                           .map((i) => `${i.name} (${i.quantity})`)
                           .join(", ")}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="w-[90px] text-right">
                       <Badge
                         variant={
                           recipient.status === "confirmed" ||
