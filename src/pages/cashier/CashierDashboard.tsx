@@ -205,10 +205,14 @@ export default function CashierDashboard() {
 
   const confirmPaymentMutation = useMutation({
     mutationFn: async (orderIds: string[]) => {
-      // First update the orders to paid
+      // First update the orders to paid with cash payment method
       const { error } = await supabase
         .from('orders')
-        .update({ status: 'paid' })
+        .update({ 
+          status: 'paid',
+          payment_method: 'cash',
+          admin_fee: 0
+        })
         .in('id', orderIds);
 
       if (error) throw error;

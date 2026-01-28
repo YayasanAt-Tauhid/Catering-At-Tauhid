@@ -7,6 +7,15 @@ export const QRIS_MAX_AMOUNT = 628000;
 
 // Payment method configurations
 export const PAYMENT_METHODS = {
+  // Tunai (Cash) - no fee
+  cash: {
+    id: "cash",
+    name: "Tunai",
+    feeType: "fixed" as const,
+    feePercentage: 0,
+    feeValue: 0,
+    maxAmount: null,
+  },
   // QRIS / E-Wallet - 0.7% fee
   qris: {
     id: "qris",

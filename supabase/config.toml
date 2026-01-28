@@ -1,11 +1,1 @@
-project_id = "nxegugfgzayjnyqagcge"
-
-[api]
-enabled = true
-port = 54321
-
-[functions.create-payment]
-verify_jwt = false
-
-[functions.payment-webhook]
-verify_jwt = false
+project_id = "cdotfnjrhutepntflkgq"
