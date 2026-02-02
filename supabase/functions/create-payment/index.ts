@@ -1,496 +1,588 @@
-// Version 6.1 - Auto QRIS/VA selection with admin fee + Reuse existing snap_token
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+/**
+ * Edge Function: create-payment
+ * Version: 7.0 - Production Ready
+ * 
+ * Creates Midtrans payment transactions for Dapoer At-Tauhid orders.
+ * Supports both single and BULK orders with automatic QRIS/VA selection.
+ * 
+ * Business Rules:
+ * - Amount <= 628,000 → QRIS (0.7% fee)
+ * - Amount > 628,000 → VA (Rp 4,400 flat fee)
+ * - All transaction IDs prefixed with "DAPOER-"
+ */
 
-const corsHeaders = {
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+// ============================================================================
+// TYPES & ENUMS
+// ============================================================================
+
+/** Order status enum */
+enum OrderStatus {
+  PENDING = "pending",
+  PAID = "paid",
+  CONFIRMED = "confirmed",
+  FAILED = "failed",
+  EXPIRED = "expired",
+  CANCELLED = "cancelled",
+}
+
+/** Payment method enum */
+enum PaymentMethod {
+  QRIS = "qris",
+  BANK_TRANSFER = "bank_transfer",
+  CASH = "cash",
+}
+
+/** Order item from database */
+interface OrderItem {
+  id: string;
+  menu_item_id: string | null;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  menu_item: { name: string } | null;
+}
+
+/** Recipient from database */
+interface Recipient {
+  name: string;
+  class: string | null;
+}
+
+/** Order from database */
+interface Order {
+  id: string;
+  user_id: string | null;
+  recipient_id: string | null;
+  status: string;
+  total_amount: number;
+  admin_fee: number | null;
+  payment_method: string | null;
+  delivery_date: string | null;
+  snap_token: string | null;
+  payment_url: string | null;
+  transaction_id: string | null;
+  guest_name: string | null;
+  guest_phone: string | null;
+  guest_class: string | null;
+  recipient: Recipient | null;
+  order_items: OrderItem[];
+}
+
+/** Payment info response */
+interface PaymentInfo {
+  baseAmount: number;
+  adminFee: number;
+  totalAmount: number;
+  paymentMethod: PaymentMethod;
+  feeType: string;
+}
+
+/** Midtrans item detail */
+interface MidtransItem {
+  id: string;
+  price: number;
+  quantity: number;
+  name: string;
+}
+
+/** Request body */
+interface CreatePaymentRequest {
+  orderId?: string;
+  orderIds?: string[];
+  isGuest?: boolean;
+  forceNewToken?: boolean;
+}
+
+// ============================================================================
+// CONSTANTS
+// ============================================================================
+
+const DAPOER_PREFIX = "DAPOER";
+
+const PAYMENT_CONFIG = {
+  QRIS_MAX_AMOUNT: 628000,
+  QRIS_FEE_PERCENTAGE: 0.7,
+  VA_FEE_FLAT: 4400,
+} as const;
+
+const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Payment configuration constants
-const PAYMENT_CONFIG = {
-  // Threshold: <= 628000 uses QRIS, > 628000 uses VA
-  QRIS_MAX_AMOUNT: 628000,
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
-  // QRIS fee: 0.7%
-  QRIS_FEE_PERCENTAGE: 0.7,
-
-  // VA fee: flat Rp 4,400
-  VA_FEE_FLAT: 4400,
+/** Logger with timestamp and context */
+const log = {
+  info: (message: string, data?: unknown) => {
+    console.log(`[create-payment] ${message}`, data ? JSON.stringify(data) : "");
+  },
+  error: (message: string, error?: unknown) => {
+    console.error(`[create-payment] ERROR: ${message}`, error);
+  },
+  warn: (message: string, data?: unknown) => {
+    console.warn(`[create-payment] WARN: ${message}`, data ? JSON.stringify(data) : "");
+  },
 };
 
-// Calculate admin fee based on amount
+/** Generate DAPOER-prefixed transaction ID */
+function generateTransactionId(orderIds: string[]): string {
+  if (orderIds.length === 1) {
+    return `${DAPOER_PREFIX}-${orderIds[0]}`;
+  }
+  return `${DAPOER_PREFIX}-BULK-${Date.now()}-${orderIds.length}`;
+}
+
+/** Calculate admin fee based on amount */
 function calculateAdminFee(baseAmount: number): {
   fee: number;
-  method: string;
+  method: PaymentMethod;
   feeType: string;
 } {
   if (baseAmount <= PAYMENT_CONFIG.QRIS_MAX_AMOUNT) {
-    // Use QRIS with 0.7% fee
-    const fee = Math.ceil(
-      (baseAmount * PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE) / 100,
-    );
+    const fee = Math.ceil((baseAmount * PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE) / 100);
     return {
       fee,
-      method: "qris",
+      method: PaymentMethod.QRIS,
       feeType: `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`,
     };
-  } else {
-    // Use VA with flat fee Rp 4,400
-    return {
-      fee: PAYMENT_CONFIG.VA_FEE_FLAT,
-      method: "bank_transfer",
-      feeType: `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`,
-    };
   }
+  return {
+    fee: PAYMENT_CONFIG.VA_FEE_FLAT,
+    method: PaymentMethod.BANK_TRANSFER,
+    feeType: `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`,
+  };
 }
 
-// Get enabled payment methods based on amount
+/** Get enabled payment methods for Midtrans */
 function getEnabledPayments(baseAmount: number): string[] {
   if (baseAmount <= PAYMENT_CONFIG.QRIS_MAX_AMOUNT) {
-    // Only QRIS for amounts <= 628k
     return ["other_qris"];
-  } else {
-    // Only bank transfer/VA for amounts > 628k
-    return ["bank_transfer"];
+  }
+  return ["bank_transfer"];
+}
+
+/** Validate delivery date is not in the past */
+function validateDeliveryDate(deliveryDate: string | null): boolean {
+  if (!deliveryDate) return true;
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const delivery = new Date(deliveryDate);
+  delivery.setHours(0, 0, 0, 0);
+  
+  return delivery >= today;
+}
+
+/** Create Supabase client based on auth context */
+function createSupabaseClient(
+  isGuest: boolean,
+  authHeader: string | null
+): SupabaseClient {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  
+  if (!supabaseUrl) {
+    throw new Error("SUPABASE_URL not configured");
+  }
+
+  if (isGuest) {
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!serviceRoleKey) {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY not configured");
+    }
+    return createClient(supabaseUrl, serviceRoleKey);
+  }
+
+  if (!authHeader) {
+    throw new Error("Authorization header required for authenticated checkout");
+  }
+
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!anonKey) {
+    throw new Error("SUPABASE_ANON_KEY not configured");
+  }
+
+  return createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+}
+
+/** Fetch orders from database */
+async function fetchOrders(
+  supabase: SupabaseClient,
+  orderIds: string[]
+): Promise<Order[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(`
+      *,
+      recipient:recipients(name, class),
+      order_items(
+        id,
+        menu_item_id,
+        quantity,
+        unit_price,
+        subtotal,
+        menu_item:menu_items(name)
+      )
+    `)
+    .in("id", orderIds);
+
+  if (error) {
+    log.error("Failed to fetch orders", error);
+    throw new Error("Orders not found");
+  }
+
+  if (!data || data.length === 0) {
+    throw new Error("Orders not found");
+  }
+
+  return data as Order[];
+}
+
+/** Validate orders for payment */
+function validateOrders(orders: Order[], isGuest: boolean): void {
+  // Check for paid orders
+  const paidStatuses = [OrderStatus.PAID, OrderStatus.CONFIRMED];
+  const hasPaidOrder = orders.some((order) => 
+    paidStatuses.includes(order.status as OrderStatus)
+  );
+  
+  if (hasPaidOrder) {
+    throw new Error("Pesanan sudah dibayar");
+  }
+
+  // Validate delivery dates
+  for (const order of orders) {
+    if (!validateDeliveryDate(order.delivery_date)) {
+      log.warn("Delivery date expired", { orderId: order.id, deliveryDate: order.delivery_date });
+      throw new Error("Tidak dapat membayar - tanggal penerimaan sudah lewat");
+    }
+  }
+
+  // Validate guest checkout
+  if (isGuest) {
+    const hasAuthenticatedOrder = orders.some((order) => order.user_id !== null);
+    if (hasAuthenticatedOrder) {
+      throw new Error("Guest checkout can only be used for guest orders");
+    }
   }
 }
 
-serve(async (req) => {
-  console.log("[V6.1] Create payment function called");
+/** Check if existing snap token can be reused */
+function canReuseToken(orders: Order[]): boolean {
+  if (orders.length === 0) return false;
 
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  const firstOrder = orders[0];
+  
+  // Must have a snap token and be pending
+  if (!firstOrder.snap_token || firstOrder.status !== OrderStatus.PENDING) {
+    return false;
   }
 
-  try {
-    const body = await req.json();
-    console.log("[V6.1] Received body:", JSON.stringify(body));
+  // For single order, just check if it has a valid token
+  if (orders.length === 1) {
+    return true;
+  }
 
-    // Support both single orderId and multiple orderIds
-    let orderIds: string[] = [];
-    const isGuestCheckout = body.isGuest === true;
-    const forceNewToken = body.forceNewToken === true; // Option to force create new token
+  // For multiple orders, all must share the same token and transaction_id
+  return orders.every((order) =>
+    order.snap_token === firstOrder.snap_token &&
+    order.transaction_id === firstOrder.transaction_id &&
+    order.status === OrderStatus.PENDING
+  );
+}
 
-    if (body.orderIds && Array.isArray(body.orderIds)) {
-      orderIds = body.orderIds;
-      console.log("[V6.1] Using orderIds array:", orderIds);
-    } else if (body.orderId) {
-      orderIds = [body.orderId];
-      console.log("[V6.1] Using single orderId:", body.orderId);
-    }
-
-    console.log(
-      "[V6.1] Final orderIds to process:",
-      orderIds,
-      "isGuest:",
-      isGuestCheckout,
-      "forceNewToken:",
-      forceNewToken,
-    );
-
-    if (orderIds.length === 0) {
-      console.log("[V6.1] No order IDs provided");
-      throw new Error("Order ID is required");
-    }
-
-    // For guest checkout, use service role key to bypass RLS
-    // For authenticated users, use the authorization header
-    let supabaseClient;
-
-    if (isGuestCheckout) {
-      console.log("[V6.1] Guest checkout - using service role");
-      supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      );
-    } else {
-      console.log("[V6.1] Authenticated checkout - using user token");
-      const authHeader = req.headers.get("Authorization");
-      if (!authHeader) {
-        throw new Error(
-          "Authorization header required for authenticated checkout",
-        );
-      }
-      supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        {
-          global: {
-            headers: { Authorization: authHeader },
-          },
-        },
-      );
-    }
-
-    // Fetch all orders
-    console.log("[V6.1] Fetching orders from database...");
-    const { data: orders, error: orderError } = await supabaseClient
-      .from("orders")
-      .select(
-        `
-        *,
-        recipient:recipients(name, class),
-        order_items(
-          id,
-          menu_item_id,
-          quantity,
-          unit_price,
-          subtotal,
-          menu_item:menu_items(name)
-        )
-      `,
-      )
-      .in("id", orderIds);
-
-    console.log(
-      "[V6.1] Fetched orders count:",
-      orders?.length,
-      "Error:",
-      orderError?.message,
-    );
-
-    if (orderError || !orders || orders.length === 0) {
-      throw new Error("Orders not found");
-    }
-
-    // Validate delivery dates - reject if any order has a past delivery date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    for (const order of orders) {
-      if (order.delivery_date) {
-        const deliveryDate = new Date(order.delivery_date);
-        deliveryDate.setHours(0, 0, 0, 0);
-
-        if (deliveryDate < today) {
-          console.log(
-            "[V6.1] Rejected - delivery date expired:",
-            order.delivery_date,
-          );
-          throw new Error(
-            "Tidak dapat membayar - tanggal penerimaan sudah lewat",
-          );
-        }
-      }
-    }
-
-    // Validate guest orders
-    if (isGuestCheckout) {
-      const hasNonGuestOrder = orders.some(
-        (order: any) => order.user_id !== null,
-      );
-      if (hasNonGuestOrder) {
-        throw new Error("Guest checkout can only be used for guest orders");
-      }
-    }
-
-    // Check if order is already paid
-    const hasPaidOrder = orders.some(
-      (order: any) => order.status === "paid" || order.status === "confirmed",
-    );
-    if (hasPaidOrder) {
-      throw new Error("Pesanan sudah dibayar");
-    }
-
-    // ============================================
-    // CHECK FOR EXISTING SNAP TOKEN (REUSE LOGIC)
-    // ============================================
-
-    // For single order, check if it already has a valid snap_token
-    if (orderIds.length === 1 && !forceNewToken) {
-      const existingOrder = orders[0];
-
-      if (existingOrder.snap_token && existingOrder.status === "pending") {
-        console.log("[V6.1] Found existing snap_token, reusing it");
-
-        // Calculate payment info for response
-        const baseAmount = existingOrder.total_amount;
-        const adminFee =
-          existingOrder.admin_fee || calculateAdminFee(baseAmount).fee;
-        const totalAmount = baseAmount + adminFee;
-        const paymentMethod =
-          existingOrder.payment_method || calculateAdminFee(baseAmount).method;
-        const feeType =
-          paymentMethod === "qris"
-            ? `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`
-            : `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`;
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            snapToken: existingOrder.snap_token,
-            redirectUrl: existingOrder.payment_url,
-            orderIds: orderIds,
-            reused: true,
-            paymentInfo: {
-              baseAmount,
-              adminFee,
-              totalAmount,
-              paymentMethod,
-              feeType,
-            },
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          },
-        );
-      }
-    }
-
-    // For multiple orders, check if they all have the same transaction_id and snap_token
-    if (orderIds.length > 1 && !forceNewToken) {
-      const firstToken = orders[0].snap_token;
-      const firstTransactionId = orders[0].transaction_id;
-
-      const allHaveSameToken = orders.every(
-        (order: any) =>
-          order.snap_token === firstToken &&
-          order.transaction_id === firstTransactionId &&
-          order.status === "pending" &&
-          firstToken !== null,
-      );
-
-      if (allHaveSameToken && firstToken) {
-        console.log("[V6.1] All orders have same snap_token, reusing it");
-
-        const baseAmount = orders.reduce(
-          (sum: number, order: any) => sum + order.total_amount,
-          0,
-        );
-        const adminFee =
-          orders[0].admin_fee || calculateAdminFee(baseAmount).fee;
-        const totalAmount = baseAmount + adminFee;
-        const paymentMethod =
-          orders[0].payment_method || calculateAdminFee(baseAmount).method;
-        const feeType =
-          paymentMethod === "qris"
-            ? `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`
-            : `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`;
-
-        return new Response(
-          JSON.stringify({
-            success: true,
-            snapToken: firstToken,
-            redirectUrl: orders[0].payment_url,
-            orderIds: orderIds,
-            reused: true,
-            paymentInfo: {
-              baseAmount,
-              adminFee,
-              totalAmount,
-              paymentMethod,
-              feeType,
-            },
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          },
-        );
-      }
-    }
-
-    // ============================================
-    // CREATE NEW SNAP TOKEN
-    // ============================================
-    console.log("[V6.1] Creating new snap token...");
-
-    // Calculate combined total (base amount without admin fee)
-    const baseAmount = orders.reduce(
-      (sum: number, order: any) => sum + order.total_amount,
-      0,
-    );
-    console.log("[V6.1] Base amount (before admin fee):", baseAmount);
-
-    // Calculate admin fee based on amount
-    const {
-      fee: adminFee,
-      method: paymentMethod,
-      feeType,
-    } = calculateAdminFee(baseAmount);
-    const totalAmount = baseAmount + adminFee;
-
-    console.log(
-      "[V6.1] Admin fee:",
+/** Build payment info from orders */
+function buildPaymentInfo(orders: Order[], useExisting: boolean): PaymentInfo {
+  const baseAmount = orders.reduce((sum, order) => sum + order.total_amount, 0);
+  
+  if (useExisting && orders[0].admin_fee !== null) {
+    const adminFee = orders[0].admin_fee;
+    const paymentMethod = (orders[0].payment_method as PaymentMethod) || calculateAdminFee(baseAmount).method;
+    return {
+      baseAmount,
       adminFee,
-      "| Payment method:",
+      totalAmount: baseAmount + adminFee,
       paymentMethod,
-      "| Fee type:",
-      feeType,
-    );
-    console.log("[V6.1] Total amount (with admin fee):", totalAmount);
-
-    // Get enabled payment methods
-    const enabledPayments = getEnabledPayments(baseAmount);
-    console.log("[V6.1] Enabled payments:", enabledPayments);
-
-    // Create combined order ID for Midtrans
-    const combinedOrderId =
-      orderIds.length > 1
-        ? `BULK-${Date.now()}-${orderIds.length}`
-        : orders[0].id;
-
-    console.log("[V6.1] Combined order ID:", combinedOrderId);
-
-    // Combine all items from all orders
-    const allItems: any[] = [];
-    orders.forEach((order: any) => {
-      if (order.order_items) {
-        order.order_items.forEach((item: any) => {
-          allItems.push({
-            id: item.menu_item_id || `item-${item.id}`,
-            price: Math.round(item.unit_price),
-            quantity: item.quantity,
-            name: item.menu_item?.name || "Menu Item",
-          });
-        });
-      }
-    });
-
-    // Add admin fee as a separate line item
-    allItems.push({
-      id: "admin-fee",
-      price: adminFee,
-      quantity: 1,
-      name: `Biaya Admin (${feeType})`,
-    });
-
-    console.log("[V6.1] Total items (including admin fee):", allItems.length);
-
-    // Get customer details - support both guest and authenticated orders
-    const firstOrder = orders[0];
-    let customerName = "Customer";
-    let customerPhone = "";
-
-    if (isGuestCheckout) {
-      customerName = firstOrder.guest_name || "Guest";
-      customerPhone = firstOrder.guest_phone || "";
-    } else if (firstOrder.recipient) {
-      customerName = firstOrder.recipient.name || "Customer";
-    }
-
-    const transactionDetails = {
-      order_id: combinedOrderId,
-      gross_amount: Math.round(totalAmount),
+      feeType: paymentMethod === PaymentMethod.QRIS
+        ? `${PAYMENT_CONFIG.QRIS_FEE_PERCENTAGE}%`
+        : `Rp ${PAYMENT_CONFIG.VA_FEE_FLAT.toLocaleString("id-ID")}`,
     };
+  }
 
-    const customerDetails = {
+  const { fee, method, feeType } = calculateAdminFee(baseAmount);
+  return {
+    baseAmount,
+    adminFee: fee,
+    totalAmount: baseAmount + fee,
+    paymentMethod: method,
+    feeType,
+  };
+}
+
+/** Build Midtrans item details */
+function buildItemDetails(orders: Order[], paymentInfo: PaymentInfo): MidtransItem[] {
+  const items: MidtransItem[] = [];
+
+  for (const order of orders) {
+    for (const item of order.order_items) {
+      items.push({
+        id: item.menu_item_id || `item-${item.id}`,
+        price: Math.round(item.unit_price),
+        quantity: item.quantity,
+        name: item.menu_item?.name || "Menu Item",
+      });
+    }
+  }
+
+  // Add admin fee as line item
+  items.push({
+    id: "admin-fee",
+    price: paymentInfo.adminFee,
+    quantity: 1,
+    name: `Biaya Admin (${paymentInfo.feeType})`,
+  });
+
+  return items;
+}
+
+/** Call Midtrans API to create transaction */
+async function createMidtransTransaction(
+  transactionId: string,
+  totalAmount: number,
+  items: MidtransItem[],
+  customerName: string,
+  customerPhone: string,
+  paymentMethod: PaymentMethod
+): Promise<{ token: string; redirectUrl: string }> {
+  const serverKey = Deno.env.get("MIDTRANS_SERVER_KEY");
+  if (!serverKey) {
+    throw new Error("MIDTRANS_SERVER_KEY not configured");
+  }
+
+  const isProduction = Deno.env.get("MIDTRANS_IS_PRODUCTION") === "true";
+  const baseUrl = isProduction
+    ? "https://app.midtrans.com"
+    : "https://app.sandbox.midtrans.com";
+
+  const enabledPayments = paymentMethod === PaymentMethod.QRIS
+    ? ["other_qris"]
+    : ["bank_transfer"];
+
+  const payload: Record<string, unknown> = {
+    transaction_details: {
+      order_id: transactionId,
+      gross_amount: Math.round(totalAmount),
+    },
+    item_details: items,
+    customer_details: {
       first_name: customerName,
       phone: customerPhone,
       email: "customer@dapoer-attauhid.com",
-    };
+    },
+    enabled_payments: enabledPayments,
+  };
 
-    // Build Midtrans payload with restricted payment methods
-    const midtransPayload: any = {
-      transaction_details: transactionDetails,
-      item_details: allItems,
-      customer_details: customerDetails,
-      enabled_payments: enabledPayments,
-    };
+  // Add QRIS acquirer config
+  if (paymentMethod === PaymentMethod.QRIS) {
+    payload.qris = { acquirer: "gopay" };
+  }
 
-    // Add specific configurations based on payment method
-    if (paymentMethod === "qris") {
-      midtransPayload.qris = {
-        acquirer: "gopay",
-      };
+  log.info("Calling Midtrans API", { 
+    url: `${baseUrl}/snap/v1/transactions`,
+    transactionId,
+    totalAmount,
+    paymentMethod,
+    isProduction,
+  });
+
+  const response = await fetch(`${baseUrl}/snap/v1/transactions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Basic ${btoa(serverKey + ":")}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    log.error("Midtrans API error", { status: response.status, error: errorText });
+    throw new Error(`Midtrans API error: ${errorText}`);
+  }
+
+  const data = await response.json();
+  log.info("Midtrans transaction created", { token: data.token });
+
+  return {
+    token: data.token,
+    redirectUrl: data.redirect_url,
+  };
+}
+
+/** Update orders with payment data */
+async function updateOrdersWithPayment(
+  supabase: SupabaseClient,
+  orderIds: string[],
+  transactionId: string,
+  snapToken: string,
+  paymentUrl: string,
+  adminFee: number,
+  paymentMethod: PaymentMethod
+): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      snap_token: snapToken,
+      payment_url: paymentUrl,
+      transaction_id: transactionId,
+      admin_fee: adminFee,
+      payment_method: paymentMethod,
+      updated_at: new Date().toISOString(),
+    })
+    .in("id", orderIds);
+
+  if (error) {
+    log.warn("Failed to update orders with payment data", error);
+  } else {
+    log.info("Orders updated successfully", { count: orderIds.length });
+  }
+}
+
+/** Create JSON response */
+function jsonResponse(
+  data: Record<string, unknown>,
+  status: number = 200
+): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+  });
+}
+
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
+
+serve(async (req) => {
+  log.info("Request received", { method: req.method });
+
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS_HEADERS });
+  }
+
+  try {
+    // Parse request body
+    const body: CreatePaymentRequest = await req.json();
+    log.info("Request body", body);
+
+    // Extract order IDs
+    let orderIds: string[] = [];
+    if (body.orderIds && Array.isArray(body.orderIds)) {
+      orderIds = body.orderIds;
+    } else if (body.orderId) {
+      orderIds = [body.orderId];
     }
 
-    console.log("[V6.1] Midtrans payload:", JSON.stringify(midtransPayload));
-
-    const midtransServerKey = Deno.env.get("MIDTRANS_SERVER_KEY");
-    if (!midtransServerKey) {
-      throw new Error("MIDTRANS_SERVER_KEY not configured");
+    if (orderIds.length === 0) {
+      throw new Error("Order ID is required");
     }
 
-    const isProduction = Deno.env.get("MIDTRANS_IS_PRODUCTION") === "true";
-    const midtransUrl = isProduction
-      ? "https://app.midtrans.com/snap/v1/transactions"
-      : "https://app.sandbox.midtrans.com/snap/v1/transactions";
+    const isGuest = body.isGuest === true;
+    const forceNewToken = body.forceNewToken === true;
 
-    console.log(
-      "[V6.1] Calling Midtrans API:",
-      midtransUrl,
-      "| Production:",
-      isProduction,
+    log.info("Processing payment", { orderIds, isGuest, forceNewToken });
+
+    // Create Supabase client
+    const authHeader = req.headers.get("Authorization");
+    const supabase = createSupabaseClient(isGuest, authHeader);
+
+    // Fetch orders
+    const orders = await fetchOrders(supabase, orderIds);
+    log.info("Orders fetched", { count: orders.length });
+
+    // Validate orders
+    validateOrders(orders, isGuest);
+
+    // Check for reusable token
+    if (!forceNewToken && canReuseToken(orders)) {
+      log.info("Reusing existing snap token");
+      
+      const paymentInfo = buildPaymentInfo(orders, true);
+      
+      return jsonResponse({
+        success: true,
+        snapToken: orders[0].snap_token,
+        redirectUrl: orders[0].payment_url,
+        orderIds,
+        reused: true,
+        paymentInfo,
+      });
+    }
+
+    // Build payment info for new token
+    const paymentInfo = buildPaymentInfo(orders, false);
+    log.info("Payment info calculated", paymentInfo);
+
+    // Generate transaction ID with DAPOER prefix
+    const transactionId = generateTransactionId(orderIds);
+    log.info("Transaction ID generated", { transactionId });
+
+    // Build item details
+    const items = buildItemDetails(orders, paymentInfo);
+
+    // Get customer details
+    const firstOrder = orders[0];
+    const customerName = isGuest
+      ? (firstOrder.guest_name || "Guest")
+      : (firstOrder.recipient?.name || "Customer");
+    const customerPhone = isGuest
+      ? (firstOrder.guest_phone || "")
+      : "";
+
+    // Create Midtrans transaction
+    const { token, redirectUrl } = await createMidtransTransaction(
+      transactionId,
+      paymentInfo.totalAmount,
+      items,
+      customerName,
+      customerPhone,
+      paymentInfo.paymentMethod
     );
 
-    const midtransAuth = btoa(midtransServerKey + ":");
+    // Update orders with payment data
+    await updateOrdersWithPayment(
+      supabase,
+      orderIds,
+      transactionId,
+      token,
+      redirectUrl,
+      paymentInfo.adminFee,
+      paymentInfo.paymentMethod
+    );
 
-    const midtransResponse = await fetch(midtransUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${midtransAuth}`,
-      },
-      body: JSON.stringify(midtransPayload),
+    return jsonResponse({
+      success: true,
+      snapToken: token,
+      redirectUrl,
+      orderIds,
+      reused: false,
+      paymentInfo,
     });
 
-    if (!midtransResponse.ok) {
-      const errorText = await midtransResponse.text();
-      console.error("[V6.1] Midtrans error:", errorText);
-      throw new Error(`Midtrans API error: ${errorText}`);
-    }
-
-    const midtransData = await midtransResponse.json();
-    console.log("[V6.1] Midtrans success, token:", midtransData.token);
-
-    // Update all orders with snap token, admin fee info, and combined transaction ID
-    const { error: updateError } = await supabaseClient
-      .from("orders")
-      .update({
-        snap_token: midtransData.token,
-        payment_url: midtransData.redirect_url,
-        transaction_id: combinedOrderId,
-        admin_fee: adminFee,
-        payment_method: paymentMethod,
-      })
-      .in("id", orderIds);
-
-    if (updateError) {
-      console.error("[V6.1] Update error:", updateError);
-      console.log(
-        "[V6.1] Warning: Failed to update orders with payment data, but payment token created",
-      );
-    } else {
-      console.log("[V6.1] Successfully updated", orderIds.length, "orders");
-    }
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        snapToken: midtransData.token,
-        redirectUrl: midtransData.redirect_url,
-        orderIds: orderIds,
-        reused: false,
-        paymentInfo: {
-          baseAmount,
-          adminFee,
-          totalAmount,
-          paymentMethod,
-          feeType,
-        },
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      },
-    );
   } catch (error: unknown) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    console.error("[V6.1] Error:", errorMessage);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: errorMessage,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      },
-    );
+    const message = error instanceof Error ? error.message : "Unknown error";
+    log.error("Request failed", message);
+    
+    return jsonResponse({ success: false, error: message }, 400);
   }
 });
