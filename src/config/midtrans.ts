@@ -11,7 +11,7 @@ export const midtransConfig = {
     ? import.meta.env.VITE_MIDTRANS_CLIENT_KEY_PRODUCTION ||
       "Mid-client-xxxxxxxxxxxxxxxx"
     : import.meta.env.VITE_MIDTRANS_CLIENT_KEY_SANDBOX ||
-      "SB-Mid-client-8LumxhWCUi6hVWMv",
+      "SB-Mid-client-xxxxxxxxxxxxxxxx",
 
   // Snap Script URLs
   snapScriptUrl: isProduction
