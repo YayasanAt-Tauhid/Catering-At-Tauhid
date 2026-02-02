@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,15 @@ import {
   Loader2,
   ExternalLink,
   Download,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { generateGuestInvoicePdf } from "@/utils/generateInvoicePdf";
+import {
+  calculateAdminFee,
+  getPaymentMethodLabel,
+  QRIS_MAX_AMOUNT,
+} from "@/lib/payment-constants";
 
 interface OrderItem {
   id: string;
@@ -49,6 +55,8 @@ interface OrderData {
   snap_token: string | null;
   payment_url: string | null;
   order_items: OrderItem[];
+  admin_fee: number | null;
+  payment_method: string | null;
 }
 
 const statusLabels: Record<
@@ -88,6 +96,8 @@ export default function OrderConfirmationPage() {
           created_at,
           snap_token,
           payment_url,
+          admin_fee,
+          payment_method,
           order_items(
             id,
             quantity,
@@ -108,6 +118,33 @@ export default function OrderConfirmationPage() {
       setIsLoading(false);
     }
   };
+
+  // Calculate payment info - must be before early returns for React Hooks rules
+  const paymentInfo = useMemo(() => {
+    if (!order) return null;
+
+    // Calculate base amount from order items
+    const baseAmount = order.order_items.reduce(
+      (sum, item) => sum + item.subtotal,
+      0,
+    );
+
+    // Use stored admin_fee if available, otherwise calculate
+    const adminFee = order.admin_fee ?? calculateAdminFee(baseAmount);
+    const totalWithFee = baseAmount + adminFee;
+    const paymentMethod =
+      order.payment_method ??
+      (baseAmount <= QRIS_MAX_AMOUNT ? "qris" : "bank_transfer");
+    const paymentLabel = getPaymentMethodLabel(baseAmount);
+
+    return {
+      baseAmount,
+      adminFee,
+      totalWithFee,
+      paymentMethod,
+      paymentLabel,
+    };
+  }, [order]);
 
   useEffect(() => {
     fetchOrder();
@@ -282,12 +319,26 @@ export default function OrderConfirmationPage() {
                     <CreditCard className="w-5 h-5" />
                     <span className="font-semibold">Lakukan Pembayaran</span>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Total:{" "}
-                    <span className="font-bold text-foreground">
-                      Rp {order.total_amount.toLocaleString("id-ID")}
-                    </span>
-                  </p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p>
+                      Subtotal:{" "}
+                      <span className="font-medium text-foreground">
+                        Rp {paymentInfo?.baseAmount.toLocaleString("id-ID")}
+                      </span>
+                    </p>
+                    <p>
+                      Biaya Admin ({paymentInfo?.paymentLabel}):{" "}
+                      <span className="font-medium text-foreground">
+                        Rp {paymentInfo?.adminFee.toLocaleString("id-ID")}
+                      </span>
+                    </p>
+                    <p className="text-base">
+                      Total:{" "}
+                      <span className="font-bold text-foreground">
+                        Rp {paymentInfo?.totalWithFee.toLocaleString("id-ID")}
+                      </span>
+                    </p>
+                  </div>
                   <Button
                     variant="hero"
                     size="lg"
@@ -382,13 +433,36 @@ export default function OrderConfirmationPage() {
                 </div>
               </div>
 
-              <div className="border-t border-border pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Total</span>
-                  <span className="text-xl font-bold text-primary">
-                    Rp {order.total_amount.toLocaleString("id-ID")}
+              <div className="border-t border-border pt-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span>
+                    Rp {paymentInfo?.baseAmount.toLocaleString("id-ID")}
                   </span>
                 </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    Biaya Admin
+                    <span className="text-xs text-primary">
+                      ({paymentInfo?.paymentLabel})
+                    </span>
+                  </span>
+                  <span>
+                    Rp {paymentInfo?.adminFee.toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <span className="font-medium">Total Bayar</span>
+                  <span className="text-xl font-bold text-primary">
+                    Rp {paymentInfo?.totalWithFee.toLocaleString("id-ID")}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  {paymentInfo?.paymentMethod === "qris"
+                    ? "Pembayaran via QRIS"
+                    : "Pembayaran via Virtual Account"}
+                </p>
               </div>
 
               {/* Order Time */}

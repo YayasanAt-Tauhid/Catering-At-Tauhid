@@ -1,8 +1,4 @@
-project_id = "nxegugfgzayjnyqagcge"
-
-[api]
-enabled = true
-port = 54321
+project_id = "cdotfnjrhutepntflkgq"
 
 [functions.create-payment]
 verify_jwt = false

@@ -36,6 +36,8 @@ export interface Order {
   guest_name?: string | null;
   guest_phone?: string | null;
   guest_class?: string | null;
+  payment_method?: string | null;
+  admin_fee?: number | null;
   recipient?: {
     name: string;
     class: string | null;

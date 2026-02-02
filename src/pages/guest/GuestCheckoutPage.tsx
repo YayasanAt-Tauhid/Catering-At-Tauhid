@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import {
+  CascadingClassSelect,
+  getFullClassString,
+  type Jenjang,
+} from "@/components/CascadingClassSelect";
 import { useNavigate, Link } from "react-router-dom";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -32,10 +37,16 @@ import {
   CreditCard,
   Loader2,
   ArrowLeft,
+  Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHolidays } from "@/hooks/useHolidays";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  calculateAdminFee,
+  getPaymentMethodLabel,
+  QRIS_MAX_AMOUNT,
+} from "@/lib/payment-constants";
 
 export default function GuestCheckoutPage() {
   const { cart, getCartTotal, clearCart } = useApp();
@@ -45,7 +56,8 @@ export default function GuestCheckoutPage() {
 
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
-  const [guestClass, setGuestClass] = useState("");
+  const [guestJenjang, setGuestJenjang] = useState<Jenjang | "">("");
+  const [guestKelas, setGuestKelas] = useState("");
   const [deliveryDate, setDeliveryDate] = useState<Date | undefined>();
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -55,6 +67,27 @@ export default function GuestCheckoutPage() {
   const minDate =
     now > cutoffTime ? addDays(startOfDay(now), 1) : startOfDay(now);
   const maxDate = addDays(minDate, 7);
+
+  // Calculate admin fee based on cart total
+  const paymentInfo = useMemo(() => {
+    const baseAmount = cart.reduce(
+      (sum, item) => sum + item.menuItem.price * item.quantity,
+      0,
+    );
+    const adminFee = calculateAdminFee(baseAmount);
+    const totalWithFee = baseAmount + adminFee;
+    const paymentMethod =
+      baseAmount <= QRIS_MAX_AMOUNT ? "qris" : "bank_transfer";
+    const paymentLabel = getPaymentMethodLabel(baseAmount);
+
+    return {
+      baseAmount,
+      adminFee,
+      totalWithFee,
+      paymentMethod,
+      paymentLabel,
+    };
+  }, [cart]);
 
   const isDateDisabled = (date: Date) => {
     return (
@@ -84,10 +117,20 @@ export default function GuestCheckoutPage() {
       return;
     }
 
-    if (!guestClass.trim()) {
+    if (!guestJenjang) {
+      toast({
+        title: "Jenjang Wajib Diisi",
+        description: "Silakan pilih jenjang pendidikan",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // PTK doesn't require class selection
+    if (guestJenjang !== "PTK" && !guestKelas.trim()) {
       toast({
         title: "Kelas Wajib Diisi",
-        description: "Silakan masukkan alamat kelas",
+        description: "Silakan pilih kelas",
         variant: "destructive",
       });
       return;
@@ -111,6 +154,7 @@ export default function GuestCheckoutPage() {
       );
 
       // Create guest order (user_id = null)
+      const fullClassString = getFullClassString(guestJenjang, guestKelas);
       const { data: newOrder, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -118,7 +162,7 @@ export default function GuestCheckoutPage() {
           recipient_id: null,
           guest_name: guestName.trim(),
           guest_phone: guestPhone.trim(),
-          guest_class: guestClass.trim(),
+          guest_class: fullClassString,
           delivery_date: format(deliveryDate, "yyyy-MM-dd"),
           total_amount: totalAmount,
           status: "pending",
@@ -255,17 +299,12 @@ export default function GuestCheckoutPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="class">Alamat Kelas *</Label>
-                  <div className="relative">
-                    <School className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="class"
-                      placeholder="Contoh: Kelas 3A"
-                      value={guestClass}
-                      onChange={(e) => setGuestClass(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
+                  <CascadingClassSelect
+                    jenjang={guestJenjang}
+                    kelas={guestKelas}
+                    onJenjangChange={setGuestJenjang}
+                    onKelasChange={setGuestKelas}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -359,10 +398,12 @@ export default function GuestCheckoutPage() {
                       <span className="font-medium">{guestName}</span>
                     </div>
                   )}
-                  {guestClass && (
+                  {guestJenjang && (
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Kelas</span>
-                      <span className="font-medium">{guestClass}</span>
+                      <span className="font-medium">
+                        {getFullClassString(guestJenjang, guestKelas)}
+                      </span>
                     </div>
                   )}
                   {deliveryDate && (
@@ -375,13 +416,40 @@ export default function GuestCheckoutPage() {
                   )}
                 </div>
 
-                <div className="border-t border-border pt-4">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Total</span>
-                    <span className="text-primary">
-                      Rp {getCartTotal().toLocaleString("id-ID")}
+                {/* Payment Method Info */}
+                <div className="border-t border-border pt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span>
+                      Rp {paymentInfo.baseAmount.toLocaleString("id-ID")}
                     </span>
                   </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      Biaya Admin
+                      <span className="text-xs text-primary">
+                        ({paymentInfo.paymentLabel})
+                      </span>
+                    </span>
+                    <span>
+                      Rp {paymentInfo.adminFee.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total Bayar</span>
+                    <span className="text-primary">
+                      Rp {paymentInfo.totalWithFee.toLocaleString("id-ID")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    {paymentInfo.paymentMethod === "qris"
+                      ? "Pembayaran via QRIS"
+                      : "Pembayaran via Virtual Account"}
+                  </p>
                 </div>
 
                 <Button
@@ -392,7 +460,8 @@ export default function GuestCheckoutPage() {
                   disabled={
                     !guestName ||
                     !guestPhone ||
-                    !guestClass ||
+                    !guestJenjang ||
+                    (guestJenjang !== "PTK" && !guestKelas) ||
                     !deliveryDate ||
                     isProcessing
                   }

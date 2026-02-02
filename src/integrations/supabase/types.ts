@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      _keep_alive_log: {
+        Row: {
+          id: number
+          pinged_at: string | null
+          response_body: string | null
+          response_status: number | null
+          source: string | null
+        }
+        Insert: {
+          id?: number
+          pinged_at?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          source?: string | null
+        }
+        Update: {
+          id?: number
+          pinged_at?: string | null
+          response_body?: string | null
+          response_status?: number | null
+          source?: string | null
+        }
+        Relationships: []
+      }
       holidays: {
         Row: {
           created_at: string
@@ -222,6 +246,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          admin_fee: number | null
           created_at: string
           delivery_date: string | null
           guest_class: string | null
@@ -241,6 +266,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          admin_fee?: number | null
           created_at?: string
           delivery_date?: string | null
           guest_class?: string | null
@@ -260,6 +286,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          admin_fee?: number | null
           created_at?: string
           delivery_date?: string | null
           guest_class?: string | null
@@ -383,6 +410,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_keep_alive_logs: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -391,6 +419,8 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: never; Returns: boolean }
+      keep_alive_ping: { Args: never; Returns: Json }
+      update_expired_orders: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "customer" | "kitchen" | "cashier"

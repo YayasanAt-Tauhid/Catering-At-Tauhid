@@ -44,6 +44,7 @@ import AdminHolidaysPage from "./pages/admin/AdminHolidaysPage";
 // Kitchen Pages
 import KitchenLayout from "./components/layouts/KitchenLayout";
 import KitchenDashboard from "./pages/kitchen/KitchenDashboard";
+import KitchenRecipientsPage from "./pages/kitchen/KitchenRecipientsPage";
 import KitchenPrintTicket from "./pages/kitchen/KitchenPrintTicket";
 
 // Cashier Pages
@@ -68,13 +69,16 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/track" element={<TrackOrderPage />} />
-              
+
               {/* Guest Checkout Routes */}
               <Route path="/guest/menu" element={<GuestMenuPage />} />
               <Route path="/guest/cart" element={<GuestCartPage />} />
               <Route path="/guest/checkout" element={<GuestCheckoutPage />} />
-              <Route path="/order-confirmation/:id" element={<OrderConfirmationPage />} />
-              
+              <Route
+                path="/order-confirmation/:id"
+                element={<OrderConfirmationPage />}
+              />
+
               {/* Parent Dashboard */}
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<DashboardHome />} />
@@ -102,6 +106,7 @@ const App = () => (
               {/* Kitchen Dashboard */}
               <Route path="/kitchen" element={<KitchenLayout />}>
                 <Route index element={<KitchenDashboard />} />
+                <Route path="recipients" element={<KitchenRecipientsPage />} />
                 <Route path="print" element={<KitchenPrintTicket />} />
               </Route>
 
