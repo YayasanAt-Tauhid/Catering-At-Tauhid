@@ -54,7 +54,6 @@ interface Recipient {
 /** Order from database */
 interface Order {
   id: string;
-  order_code: string | null;
   user_id: string | null;
   recipient_id: string | null;
   status: string;
@@ -70,12 +69,6 @@ interface Order {
   guest_class: string | null;
   recipient: Recipient | null;
   order_items: OrderItem[];
-}
-
-/** User profile from database */
-interface UserProfile {
-  full_name: string | null;
-  phone: string | null;
 }
 
 /** Payment info response */
@@ -138,22 +131,12 @@ const log = {
   },
 };
 
-/** Generate transaction ID with DAPOER prefix using order_code */
-function generateTransactionId(orders: Order[]): string {
-  const prefix = "DAPOER";
-  
-  if (orders.length === 1 && orders[0].order_code) {
-    // Format: DAPOER-ORD-A1B2C3D4
-    return `${prefix}-${orders[0].order_code}`;
+/** Generate DAPOER-prefixed transaction ID */
+function generateTransactionId(orderIds: string[]): string {
+  if (orderIds.length === 1) {
+    return `${DAPOER_PREFIX}-${orderIds[0]}`;
   }
-  // For bulk orders: DAPOER-BULK-timestamp-count
-  const timestamp = Date.now();
-  return `${prefix}-BULK-${timestamp}-${orders.length}`;
-}
-
-/** Determine order type for custom field */
-function getOrderType(orders: Order[]): string {
-  return orders.length === 1 ? "SINGLE" : "BULK";
+  return `${DAPOER_PREFIX}-BULK-${Date.now()}-${orderIds.length}`;
 }
 
 /** Calculate admin fee based on amount */
@@ -371,20 +354,13 @@ function buildItemDetails(orders: Order[], paymentInfo: PaymentInfo): MidtransIt
   return items;
 }
 
-/** Customer details for Midtrans */
-interface CustomerDetails {
-  firstName: string;
-  phone: string;
-  email: string;
-}
-
 /** Call Midtrans API to create transaction */
 async function createMidtransTransaction(
   transactionId: string,
   totalAmount: number,
   items: MidtransItem[],
-  customer: CustomerDetails,
-  orderType: string,
+  customerName: string,
+  customerPhone: string,
   paymentMethod: PaymentMethod
 ): Promise<{ token: string; redirectUrl: string }> {
   const serverKey = Deno.env.get("MIDTRANS_SERVER_KEY");
@@ -408,14 +384,11 @@ async function createMidtransTransaction(
     },
     item_details: items,
     customer_details: {
-      first_name: customer.firstName,
-      phone: customer.phone,
-      email: customer.email,
+      first_name: customerName,
+      phone: customerPhone,
+      email: "customer@dapoer-attauhid.com",
     },
     enabled_payments: enabledPayments,
-    // Custom Fields for Dapoer At-Tauhid
-    custom_field1: "DAPOER AT-TAUHID",
-    custom_field2: orderType,
   };
 
   // Add QRIS acquirer config
@@ -429,9 +402,6 @@ async function createMidtransTransaction(
     totalAmount,
     paymentMethod,
     isProduction,
-    customField1: "DAPOER AT-TAUHID",
-    customField2: orderType,
-    customerName: customer.firstName,
   });
 
   const response = await fetch(`${baseUrl}/snap/v1/transactions`, {
@@ -455,54 +425,6 @@ async function createMidtransTransaction(
   return {
     token: data.token,
     redirectUrl: data.redirect_url,
-  };
-}
-
-/** Fetch user profile for customer details */
-async function fetchUserProfile(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<UserProfile | null> {
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("full_name, phone")
-    .eq("user_id", userId)
-    .single();
-
-  if (error) {
-    log.warn("Failed to fetch user profile", { userId, error: error.message });
-    return null;
-  }
-
-  return data as UserProfile;
-}
-
-/** Build customer details from order and profile data */
-function buildCustomerDetails(
-  orders: Order[],
-  profile: UserProfile | null,
-  isGuest: boolean
-): CustomerDetails {
-  const firstOrder = orders[0];
-  
-  if (isGuest) {
-    // Guest order: use guest_name and guest_phone
-    return {
-      firstName: firstOrder.guest_name || "Tamu",
-      phone: firstOrder.guest_phone || "",
-      email: "guest@dapoer-attauhid.com",
-    };
-  }
-
-  // Authenticated order: prioritize recipient, then profile
-  const recipientName = firstOrder.recipient?.name;
-  const profileName = profile?.full_name;
-  const profilePhone = profile?.phone;
-
-  return {
-    firstName: recipientName || profileName || "Pelanggan",
-    phone: profilePhone || "",
-    email: "customer@dapoer-attauhid.com",
   };
 }
 
@@ -611,38 +533,29 @@ serve(async (req) => {
     const paymentInfo = buildPaymentInfo(orders, false);
     log.info("Payment info calculated", paymentInfo);
 
-    // Generate transaction ID using order_code
-    const transactionId = generateTransactionId(orders);
+    // Generate transaction ID with DAPOER prefix
+    const transactionId = generateTransactionId(orderIds);
     log.info("Transaction ID generated", { transactionId });
-
-    // Determine order type for custom field
-    const orderType = getOrderType(orders);
-    log.info("Order type", { orderType });
 
     // Build item details
     const items = buildItemDetails(orders, paymentInfo);
 
-    // Fetch user profile if authenticated
+    // Get customer details
     const firstOrder = orders[0];
-    let userProfile: UserProfile | null = null;
-    if (!isGuest && firstOrder.user_id) {
-      userProfile = await fetchUserProfile(supabase, firstOrder.user_id);
-    }
-
-    // Build customer details from actual data
-    const customerDetails = buildCustomerDetails(orders, userProfile, isGuest);
-    log.info("Customer details", { 
-      name: customerDetails.firstName, 
-      hasPhone: !!customerDetails.phone 
-    });
+    const customerName = isGuest
+      ? (firstOrder.guest_name || "Guest")
+      : (firstOrder.recipient?.name || "Customer");
+    const customerPhone = isGuest
+      ? (firstOrder.guest_phone || "")
+      : "";
 
     // Create Midtrans transaction
     const { token, redirectUrl } = await createMidtransTransaction(
       transactionId,
       paymentInfo.totalAmount,
       items,
-      customerDetails,
-      orderType,
+      customerName,
+      customerPhone,
       paymentInfo.paymentMethod
     );
 
