@@ -19,6 +19,7 @@ import {
   X,
   Loader2,
   CalendarOff,
+  Megaphone,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ const adminNavItems = [
   { to: "/admin/reports", icon: BarChart3, label: "Laporan" },
   { to: "/admin/invoices", icon: FileText, label: "Keuangan" },
   { to: "/admin/holidays", icon: CalendarOff, label: "Hari Libur" },
+  { to: "/admin/announcements", icon: Megaphone, label: "Pengumuman" },
 ];
 
 export default function AdminLayout() {

@@ -40,6 +40,7 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminReportsPage from "./pages/admin/AdminReportsPage";
 import AdminFinancePage from "./pages/admin/AdminFinancePage";
 import AdminHolidaysPage from "./pages/admin/AdminHolidaysPage";
+import AdminAnnouncementsPage from "./pages/admin/AdminAnnouncementsPage";
 
 // Kitchen Pages
 import KitchenLayout from "./components/layouts/KitchenLayout";
@@ -101,6 +102,7 @@ const App = () => (
                 <Route path="reports" element={<AdminReportsPage />} />
                 <Route path="invoices" element={<AdminFinancePage />} />
                 <Route path="holidays" element={<AdminHolidaysPage />} />
+                <Route path="announcements" element={<AdminAnnouncementsPage />} />
               </Route>
 
               {/* Kitchen Dashboard */}

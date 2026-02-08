@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 export default function DashboardHome() {
   const { profile } = useAuth();
@@ -48,6 +49,9 @@ export default function DashboardHome() {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Announcement Banner */}
+      <AnnouncementBanner className="mb-4" maxItems={3} />
+
       <div className="bg-gradient-to-r from-primary to-primary-glow rounded-2xl p-6 lg:p-8 text-primary-foreground">
         <h1 className="text-2xl lg:text-3xl font-bold mb-2">
           Selamat Datang, {profile?.full_name?.split(' ')[0] || 'User'}! 👋

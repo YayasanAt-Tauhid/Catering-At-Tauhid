@@ -9,6 +9,7 @@ import {
   Search,
   UserPlus,
 } from "lucide-react";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
 
 export default function Index() {
   const features = [
@@ -64,6 +65,9 @@ export default function Index() {
 
       {/* Hero */}
       <main className="container mx-auto px-4 py-16 lg:py-24">
+        {/* Announcement Banner */}
+        <AnnouncementBanner className="max-w-3xl mx-auto mb-8" maxItems={2} />
+
         <div className="text-center max-w-3xl mx-auto animate-slide-up">
           <h1 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
             Pesan Makanan Sekolah
