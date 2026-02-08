@@ -1,0 +1,7 @@
+project_id = "nxegugfgzayjnyqagcge"
+
+[functions.create-payment]
+verify_jwt = false
+
+[functions.payment-webhook]
+verify_jwt = false
