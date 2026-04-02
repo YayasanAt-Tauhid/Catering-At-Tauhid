@@ -60,6 +60,9 @@ export const loadMidtransScript = (): Promise<void> => {
     script.async = true;
 
     script.onload = () => {
+      if (window.snap?.setClientKey) {
+        window.snap.setClientKey(midtransConfig.clientKey);
+      }
       console.log(
         `Midtrans Snap loaded (${midtransConfig.isProduction ? "Production" : "Sandbox"})`,
       );
