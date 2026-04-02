@@ -90,6 +90,7 @@ declare global {
           onClose?: () => void;
         },
       ) => void;
+      setClientKey?: (clientKey: string) => void;
     };
   }
 }
