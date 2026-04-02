@@ -372,6 +372,11 @@ export default function OrderConfirmationPage() {
                     </a>
                   )}
                 </div>
+                {paymentInfo?.paymentMethod === "qris" && (
+                  <div className="mt-2">
+                    <QrisTutorial />
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
