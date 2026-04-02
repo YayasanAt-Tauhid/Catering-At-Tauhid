@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { usePayment } from "@/hooks/usePayment";
+import QrisTutorial from "@/components/QrisTutorial";
 import { format } from "date-fns";
 import { id } from "date-fns/locale";
 import {
@@ -310,6 +311,8 @@ export default function TrackOrderPage() {
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           )}
+
+                          <QrisTutorial />
                         </div>
                       </CardContent>
                     </Card>
