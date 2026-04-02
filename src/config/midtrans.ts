@@ -29,6 +29,9 @@ export const loadMidtransScript = (): Promise<void> => {
   return new Promise((resolve, reject) => {
     // Check if already loaded
     if (window.snap) {
+      if (window.snap.setClientKey) {
+        window.snap.setClientKey(midtransConfig.clientKey);
+      }
       resolve();
       return;
     }
@@ -38,7 +41,12 @@ export const loadMidtransScript = (): Promise<void> => {
       'script[src*="midtrans.com/snap/snap.js"]',
     );
     if (existingScript) {
-      existingScript.addEventListener("load", () => resolve());
+      existingScript.addEventListener("load", () => {
+        if (window.snap?.setClientKey) {
+          window.snap.setClientKey(midtransConfig.clientKey);
+        }
+        resolve();
+      });
       existingScript.addEventListener("error", () =>
         reject(new Error("Failed to load Midtrans script")),
       );
