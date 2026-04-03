@@ -372,11 +372,6 @@ export default function OrderConfirmationPage() {
                     </a>
                   )}
                 </div>
-                {paymentInfo?.paymentMethod === "qris" && (
-                  <div className="mt-2">
-                    <QrisTutorial />
-                  </div>
-                )}
               </CardContent>
             </Card>
           )}
@@ -480,6 +475,15 @@ export default function OrderConfirmationPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* QRIS Tutorial - always show if payment method is QRIS */}
+          {paymentInfo?.paymentMethod === "qris" && (
+            <Card>
+              <CardContent className="p-4">
+                <QrisTutorial />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Action Buttons */}
           <div className="space-y-3">
