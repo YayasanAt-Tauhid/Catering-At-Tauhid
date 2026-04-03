@@ -96,6 +96,7 @@ const App = () => (
                 <Route path="orders/:id" element={<OrderDetailPage />} />
                 <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="account-deletion" element={<AccountDeletionPage />} />
               </Route>
 
               {/* Admin Dashboard */}

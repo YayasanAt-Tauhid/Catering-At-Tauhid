@@ -194,6 +194,47 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Account & Data Management */}
+      <Card className="border-destructive/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trash2 className="w-5 h-5 text-destructive" />
+            Akun & Manajemen Data
+          </CardTitle>
+          <CardDescription>
+            Kelola data pribadi dan akun Anda
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-muted">
+            <div>
+              <p className="font-semibold">Kebijakan Privasi</p>
+              <p className="text-sm text-muted-foreground">
+                Pelajari bagaimana kami mengelola data Anda
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => window.open('/privacy-policy', '_blank')}>
+              <FileText className="w-4 h-4 mr-2" />
+              Buka
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-destructive/5 border border-destructive/20">
+            <div>
+              <p className="font-semibold text-destructive">Hapus Akun</p>
+              <p className="text-sm text-muted-foreground">
+                Hapus akun dan semua data pribadi Anda secara permanen
+              </p>
+            </div>
+            <Button variant="destructive" size="sm" onClick={() => navigate('/dashboard/account-deletion')}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Hapus Akun
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
