@@ -412,12 +412,6 @@ export default function OrderConfirmationPage() {
         </div>
       </main>
 
-      {/* Midtrans Snap Script */}
-      <script
-        type="text/javascript"
-        src="https://app.sandbox.midtrans.com/snap/snap.js"
-        data-client-key="SB-Mid-client-placeholder"
-      />
     </div>
   );
 }
