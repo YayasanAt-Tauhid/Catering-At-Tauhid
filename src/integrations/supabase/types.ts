@@ -38,6 +38,57 @@ export type Database = {
         }
         Relationships: []
       }
+      account_deletion_requests: {
+        Row: {
+          anonymize_at: string
+          anonymized_at: string | null
+          cancel_before: string
+          cancelled_at: string | null
+          created_at: string
+          delete_at: string
+          deleted_at: string | null
+          id: string
+          reason: string | null
+          reason_detail: string | null
+          requested_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          anonymize_at?: string
+          anonymized_at?: string | null
+          cancel_before?: string
+          cancelled_at?: string | null
+          created_at?: string
+          delete_at?: string
+          deleted_at?: string | null
+          id?: string
+          reason?: string | null
+          reason_detail?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          anonymize_at?: string
+          anonymized_at?: string | null
+          cancel_before?: string
+          cancelled_at?: string | null
+          created_at?: string
+          delete_at?: string
+          deleted_at?: string | null
+          id?: string
+          reason?: string | null
+          reason_detail?: string | null
+          requested_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           content: string
