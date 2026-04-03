@@ -109,13 +109,36 @@ export default function PrivacyPolicyPage() {
 
         <Section title="8. Penghapusan Akun">
           <p>
-            Anda dapat meminta penghapusan akun dan seluruh data pribadi Anda kapan saja. Untuk melakukannya,
-            hubungi kami melalui email di{" "}
+            Anda dapat meminta penghapusan akun kapan saja melalui menu{" "}
+            <Link to="/dashboard/settings" className="text-primary hover:underline">Pengaturan Akun</Link>{" "}
+            → <strong>Hapus Akun</strong>. Proses penghapusan mengikuti tahapan berikut:
+          </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><strong>Permintaan:</strong> Akun Anda akan ditandai sebagai "menunggu penghapusan" dan Anda akan menerima konfirmasi.</li>
+            <li><strong>Masa Pembatalan (72 jam):</strong> Anda dapat membatalkan permintaan dalam waktu 72 jam setelah pengajuan.</li>
+            <li><strong>Anonimisasi (7 hari):</strong> Data pribadi (nama, email, nomor telepon) akan dianonimkan. Catatan transaksi tetap disimpan tanpa identitas untuk keperluan audit dan pajak.</li>
+            <li><strong>Penghapusan Permanen (30 hari):</strong> Akun Anda akan dihapus secara permanen dari sistem autentikasi.</li>
+          </ul>
+          <p className="font-medium text-foreground">Data yang dihapus:</p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>Profil pengguna, preferensi, dan pengaturan akun</li>
+            <li>Data penerima (alamat pengiriman)</li>
+            <li>Sesi login dan token autentikasi</li>
+          </ul>
+          <p className="font-medium text-foreground">Data yang dipertahankan (dianonimkan, disimpan hingga 7 tahun):</p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li>Riwayat pesanan (untuk keperluan pajak dan audit)</li>
+            <li>Catatan pembayaran (untuk jejak audit keuangan)</li>
+            <li>Log permintaan penghapusan akun</li>
+          </ul>
+          <p>
+            Anda juga dapat menghubungi kami melalui email di{" "}
             <a href="mailto:dapoer@hijrah-attauhid.or.id" className="text-primary hover:underline">
               dapoer@hijrah-attauhid.or.id
             </a>{" "}
-            atau melalui WhatsApp Admin. Proses penghapusan akan diselesaikan dalam waktu maksimal 30 hari kerja
-            sesuai ketentuan yang berlaku.
+            atau melalui halaman{" "}
+            <Link to="/support" className="text-primary hover:underline">Dukungan Pelanggan</Link>{" "}
+            untuk bantuan terkait penghapusan akun.
           </p>
         </Section>
 
