@@ -44,7 +44,7 @@ const faqs = [
   },
   {
     q: "Siapa yang bisa saya hubungi untuk masalah teknis?",
-    a: "Untuk masalah teknis terkait aplikasi, silakan kirim email ke support@dapoerattauhid.com atau hubungi kami melalui WhatsApp di nomor yang tertera di bawah.",
+    a: "Untuk masalah teknis terkait aplikasi, silakan kirim email ke dapoer@hijrah-attauhid.or.id atau hubungi kami melalui WhatsApp di nomor yang tertera di bawah.",
   },
 ];
 
@@ -109,18 +109,18 @@ export default function SupportPage() {
                   <MessageCircle className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium text-foreground">WhatsApp Admin</p>
-                    <p className="text-sm text-muted-foreground">+62 812-3456-7890</p>
+                    <p className="text-sm text-muted-foreground">+62 821-8210-0669</p>
                   </div>
                 </a>
 
                 <a
-                  href="mailto:support@dapoerattauhid.com"
+                  href="mailto:dapoer@hijrah-attauhid.or.id"
                   className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
                 >
                   <Mail className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium text-foreground">Email</p>
-                    <p className="text-sm text-muted-foreground">support@dapoerattauhid.com</p>
+                    <p className="text-sm text-muted-foreground">dapoer@hijrah-attauhid.or.id</p>
                   </div>
                 </a>
 

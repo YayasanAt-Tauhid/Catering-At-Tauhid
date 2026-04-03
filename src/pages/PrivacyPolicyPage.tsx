@@ -83,8 +83,8 @@ export default function PrivacyPolicyPage() {
           </ul>
           <p>
             Untuk menggunakan hak-hak ini, silakan hubungi kami melalui email di{" "}
-            <a href="mailto:support@dapoerattauhid.com" className="text-primary hover:underline">
-              support@dapoerattauhid.com
+            <a href="mailto:dapoer@hijrah-attauhid.or.id" className="text-primary hover:underline">
+              dapoer@hijrah-attauhid.or.id
             </a>{" "}
             atau melalui halaman{" "}
             <Link to="/support" className="text-primary hover:underline">Dukungan Pelanggan</Link>.
@@ -111,8 +111,8 @@ export default function PrivacyPolicyPage() {
           <p>
             Anda dapat meminta penghapusan akun dan seluruh data pribadi Anda kapan saja. Untuk melakukannya,
             hubungi kami melalui email di{" "}
-            <a href="mailto:support@dapoerattauhid.com" className="text-primary hover:underline">
-              support@dapoerattauhid.com
+            <a href="mailto:dapoer@hijrah-attauhid.or.id" className="text-primary hover:underline">
+              dapoer@hijrah-attauhid.or.id
             </a>{" "}
             atau melalui WhatsApp Admin. Proses penghapusan akan diselesaikan dalam waktu maksimal 30 hari kerja
             sesuai ketentuan yang berlaku.
