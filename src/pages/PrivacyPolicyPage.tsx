@@ -150,7 +150,7 @@ export default function PrivacyPolicyPage() {
       {/* Footer */}
       <footer className="border-t bg-muted/30 py-8 mt-10 print:hidden">
         <div className="container mx-auto px-4 max-w-4xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <p>© 2024 Dapoer At-Tauhid. Hak cipta dilindungi.</p>
+          <p>© 2026 Dapoer At-Tauhid. Hak cipta dilindungi.</p>
           <div className="flex gap-4">
             <Link to="/" className="hover:text-foreground transition-colors">Beranda</Link>
             <Link to="/support" className="hover:text-foreground transition-colors">Dukungan</Link>
