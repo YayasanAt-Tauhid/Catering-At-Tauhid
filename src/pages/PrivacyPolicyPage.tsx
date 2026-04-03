@@ -143,7 +143,7 @@ export default function PrivacyPolicyPage() {
         </Section>
 
         <div className="border-t pt-6 text-sm text-muted-foreground">
-          <p>Terakhir diperbarui: April 2024</p>
+          <p>Terakhir diperbarui: April 2026</p>
         </div>
       </main>
 
