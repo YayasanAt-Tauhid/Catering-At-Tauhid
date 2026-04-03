@@ -32,6 +32,7 @@ import OrdersPage from "./pages/dashboard/OrdersPage";
 import OrderDetailPage from "./pages/dashboard/OrderDetailPage";
 import InvoicesPage from "./pages/dashboard/InvoicesPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import AccountDeletionPage from "./pages/dashboard/AccountDeletionPage";
 
 // Admin Pages
 import AdminLayout from "./components/layouts/AdminLayout";
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="orders/:id" element={<OrderDetailPage />} />
                 <Route path="invoices" element={<InvoicesPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+                <Route path="account-deletion" element={<AccountDeletionPage />} />
               </Route>
 
               {/* Admin Dashboard */}
