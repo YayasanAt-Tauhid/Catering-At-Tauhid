@@ -183,6 +183,11 @@ export default function OrderConfirmationPage() {
     // Otherwise, initiate a new payment
     const paymentData = await initiateGuestPayment(order.id);
     if (paymentData?.snapToken) {
+      // Update local state with new token
+      setOrder((prev) =>
+        prev ? { ...prev, snap_token: paymentData.snapToken } : null,
+      );
+
       openPaymentModal(
         paymentData.snapToken,
         () => {
