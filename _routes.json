@@ -6,6 +6,8 @@
   "exclude": [
     "/manifest.json",
     "/manifest.webmanifest",
+    "/pwa-icon-192.png",
+    "/pwa-icon-512.png",
     "/registerSW.js",
     "/sw.js",
     "/robots.txt",
