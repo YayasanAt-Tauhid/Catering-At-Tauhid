@@ -11,6 +11,7 @@ import { User, Mail, Phone, Lock, Shield, Save, Trash2, FileText, ExternalLink }
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [profileData, setProfileData] = useState({
     name: user?.user_metadata?.full_name || '',
