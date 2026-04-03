@@ -27,31 +27,23 @@ export const midtransConfig = {
 // Function to dynamically load Midtrans Snap script
 export const loadMidtransScript = (): Promise<void> => {
   return new Promise((resolve, reject) => {
-    // Check if already loaded
-    if (window.snap) {
-      if (window.snap.setClientKey) {
+    const configureSnapClientKey = () => {
+      if (window.snap?.setClientKey) {
         window.snap.setClientKey(midtransConfig.clientKey);
       }
+    };
+
+    // Check if already loaded
+    if (window.snap) {
+      configureSnapClientKey();
       resolve();
       return;
     }
 
-    // Check if script is already in DOM
-    const existingScript = document.querySelector(
-      'script[src*="midtrans.com/snap/snap.js"]',
-    );
-    if (existingScript) {
-      existingScript.addEventListener("load", () => {
-        if (window.snap?.setClientKey) {
-          window.snap.setClientKey(midtransConfig.clientKey);
-        }
-        resolve();
-      });
-      existingScript.addEventListener("error", () =>
-        reject(new Error("Failed to load Midtrans script")),
-      );
-      return;
-    }
+    // Remove stale/inert scripts so the loader always controls initialization
+    document
+      .querySelectorAll('script[src*="midtrans.com/snap/snap.js"]')
+      .forEach((script) => script.remove());
 
     // Create and load script
     const script = document.createElement("script");
@@ -60,9 +52,12 @@ export const loadMidtransScript = (): Promise<void> => {
     script.async = true;
 
     script.onload = () => {
-      if (window.snap?.setClientKey) {
-        window.snap.setClientKey(midtransConfig.clientKey);
+      if (!window.snap) {
+        reject(new Error("Midtrans Snap loaded but window.snap is unavailable"));
+        return;
       }
+
+      configureSnapClientKey();
       console.log(
         `Midtrans Snap loaded (${midtransConfig.isProduction ? "Production" : "Sandbox"})`,
       );
