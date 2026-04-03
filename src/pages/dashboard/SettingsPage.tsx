@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Phone, Lock, Shield, Save } from 'lucide-react';
+import { User, Mail, Phone, Lock, Shield, Save, Trash2, FileText, ExternalLink } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useAuth();
