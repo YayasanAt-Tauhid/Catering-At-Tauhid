@@ -38,6 +38,45 @@ export type Database = {
         }
         Relationships: []
       }
+      announcements: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean
+          priority: string
+          start_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: string
+          start_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: string
+          start_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       holidays: {
         Row: {
           created_at: string
